@@ -1,0 +1,361 @@
+// CCC POS — Canadian Cellular Communication
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/* ------------------------------ staff ------------------------------ */
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("STAFF") // OWNER | MANAGER | STAFF | TECH
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  sales           Sale[]
+  ticketsAssigned Ticket[] @relation("Technician")
+}
+
+model Location {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  address String? @db.Text
+  active  Boolean @default(true)
+
+  units ProductUnit[]
+  sales    Sale[]
+  tickets  Ticket[]
+}
+
+/* ---------------------------- inventory ---------------------------- */
+
+model Category {
+  id   String @id @default(cuid())
+  name String
+
+  // One level only: a category with a parent can't have children of its own.
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  products Product[]
+
+  @@index([parentId])
+}
+
+model Vendor {
+  id   String @id @default(cuid())
+  name String @unique
+
+  accountNumber String? // your account number with them
+  contactPerson String?
+  currency      String  @default("CAD") // CAD | USD
+
+  phone  String?
+  mobile String?
+  fax    String?
+
+  email1 String?
+  email2 String?
+
+  country  String? @default("CA")
+  address  String? @db.Text
+  address2 String? @db.Text
+  city     String?
+  province String?
+  postal   String?
+
+  notes String? @db.Text
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  products Product[]
+  stockEntries StockEntry[]
+  units ProductUnit[]
+}
+
+model Brand {
+  id   String @id @default(cuid())
+  name String @unique
+
+  notes  String? @db.Text
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id   String @id @default(cuid())
+  name String
+
+  sku       String  @unique
+  upc       String?
+  ean       String?
+  customSku String?
+
+  brandId String?
+  brand   Brand?  @relation(fields: [brandId], references: [id])
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id])
+
+  costCents        Int @default(0) // what you paid
+  onlinePriceCents Int @default(0) // listed online
+  salePriceCents   Int @default(0) // what you sell for in store
+
+  taxable      Boolean @default(true)
+  reorderAt    Int     @default(0)
+  notes        String? @db.Text
+  active       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  units        ProductUnit[]
+  stockEntries StockEntry[]
+  saleItems    SaleItem[]
+  layawayItems LayawayItem[]
+  ticketParts  TicketPart[]
+
+  @@index([name])
+  @@index([upc])
+}
+
+/// One physical device — its own serial, condition, and shelf.
+model ProductUnit {
+  id String @id @default(cuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  serial    String  @unique
+  condition String // NEW | OPEN_BOX | USED_LIKE_NEW | USED_GOOD | USED_FAIR | FOR_PARTS
+  storage   String?
+  color     String?
+  warrantyMonths Int @default(3)
+  labelCostCents Int? // price shown on the printed tag; not used in accounting
+  note String? @db.Text
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id])
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+
+  status String @default("IN_STOCK") // IN_STOCK | RESERVED | SOLD | RETURNED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([productId])
+  @@index([status])
+}
+
+/// A batch of stock coming in — the quantity on hand is the sum of these.
+/// Sales and write-offs go in as negative quantities.
+model StockEntry {
+  id String @id @default(cuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity  Int // negative for corrections and sales
+  costCents Int @default(0) // what this batch cost per unit
+
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id])
+
+  note String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+/* ---------------------------- customers ---------------------------- */
+
+model Customer {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String?
+  phone     String?
+  email     String?
+  address   String? @db.Text
+  city      String?
+  postal    String?
+  notes     String? @db.Text
+  createdAt DateTime @default(now())
+
+  sales    Sale[]
+  tickets  Ticket[]
+  layaways Layaway[]
+
+  @@index([phone])
+  @@index([lastName])
+}
+
+/* -------------------------- service tickets -------------------------- */
+
+model Ticket {
+  id     String @id @default(cuid())
+  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  deviceMake  String?
+  deviceModel String?
+  deviceImei  String?
+  passcode    String?
+  issue       String  @db.Text
+  diagnosis   String? @db.Text
+
+  status String @default("INTAKE") // INTAKE | DIAGNOSING | WAITING_PARTS | READY | COLLECTED | CANCELLED
+
+  estimateCents Int @default(0)
+  labourCents   Int @default(0)
+  depositCents  Int @default(0)
+
+  technicianId String?
+  technician   User?     @relation("Technician", fields: [technicianId], references: [id])
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id])
+
+  promisedAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  parts TicketPart[]
+  sale  Sale?
+}
+
+model TicketPart {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+  name       String
+  quantity   Int      @default(1)
+  priceCents Int      @default(0)
+}
+
+/* ------------------------------ sales ------------------------------ */
+
+model Sale {
+  id     String @id @default(cuid())
+  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
+  ticketId   String?   @unique
+  ticket     Ticket?   @relation(fields: [ticketId], references: [id])
+
+  subtotalCents Int @default(0)
+  taxCents      Int @default(0)
+  totalCents    Int @default(0)
+
+  status String @default("OPEN") // OPEN | PAID | REFUNDED | VOID
+
+  createdAt DateTime @default(now())
+
+  items    SaleItem[]
+  payments Payment[]
+  invoice  Invoice?
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  name           String // snapshot — survives later product edits
+  quantity       Int    @default(1)
+  unitPriceCents Int    @default(0)
+  costCents      Int    @default(0) // snapshot, for margin reports
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  saleId    String?
+  sale      Sale?    @relation(fields: [saleId], references: [id])
+  layawayId String?
+  layaway   Layaway? @relation(fields: [layawayId], references: [id])
+
+  amountCents Int
+  method      String // CASH | CARD | ETRANSFER | OTHER
+  reference   String? // Clover payment id
+  createdAt   DateTime @default(now())
+}
+
+/* ----------------------------- layaway ----------------------------- */
+
+model Layaway {
+  id     String @id @default(cuid())
+  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  totalCents Int    @default(0)
+  paidCents  Int    @default(0)
+  status     String @default("ACTIVE") // ACTIVE | COMPLETED | CANCELLED | EXPIRED
+
+  expiresAt DateTime?
+  notes     String? @db.Text
+  createdAt DateTime  @default(now())
+
+  items    LayawayItem[]
+  payments Payment[]
+}
+
+model LayawayItem {
+  id             String   @id @default(cuid())
+  layawayId      String
+  layaway        Layaway  @relation(fields: [layawayId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        Product? @relation(fields: [productId], references: [id])
+  name           String
+  quantity       Int      @default(1)
+  unitPriceCents Int      @default(0)
+}
+
+/* ----------------------------- invoices ----------------------------- */
+
+model Invoice {
+  id     String @id @default(cuid())
+  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+  saleId String @unique
+  sale   Sale   @relation(fields: [saleId], references: [id])
+
+  sentTo    String?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+}

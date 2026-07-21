@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" role="img" aria-label="CCC">
   <title>CCC</title>
-  <g fill="none" stroke="#1a1f3c" stroke-linecap="round">
+  <g fill="none" stroke="#ffffff" stroke-linecap="round">
     <path d="M 30.29 7.74 A 16 16 0 1 0 30.29 32.26" stroke-width="3.2" opacity="0.35"/>
     <path d="M 27.07 11.57 A 11 11 0 1 0 27.07 28.43" stroke-width="3.2" opacity="0.65"/>
     <path d="M 23.86 15.40 A 6 6 0 1 0 23.86 24.60" stroke-width="3.2"/>

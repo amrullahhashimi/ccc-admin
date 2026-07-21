@@ -6,8 +6,8 @@ export default function SignIn() {
   return (
     <>
       <PageMeta
-        title="React.js SignIn Dashboard | TailAdmin - Next.js Admin Dashboard Template"
-        description="This is React.js SignIn Tables Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
+        title="CCC Admin - Sign In"
+        description="Sign in to your CCC Admin account to access the dashboard and manage your inventory, customers, and more."
       />
       <AuthLayout>
         <SignInForm />

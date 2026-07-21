@@ -1,66 +1,53 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
-import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
-import Alerts from "./pages/UiElements/Alerts";
-import Badges from "./pages/UiElements/Badges";
-import Avatars from "./pages/UiElements/Avatars";
-import Buttons from "./pages/UiElements/Buttons";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
-import BasicTables from "./pages/Tables/BasicTables";
-import FormElements from "./pages/Forms/FormElements";
-import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
+import { AuthProvider, RequireAuth } from "./context/AuthContext";
+
+// Uncomment each once the page file exists.
+import InventoryHome from "./pages/Inventory/InventoryHome";
+import VendorsPage from "./pages/Inventory/VendorsPage";
+import CategoriesPage from "./pages/Inventory/CategoriesPage";
+import BrandsPage from "./pages/Inventory/BrandsPage";
+import NewItemPage from "./pages/Inventory/NewItemPage";
+import ItemSearchPage from "./pages/Inventory/Itemsearchpage";
+import ProductDetailPage from "./pages/Inventory/ProductDetailPage";
+// import CustomersPage from "./pages/CustomersPage";
 
 export default function App() {
   return (
-    <>
-      <Router>
+    <Router>
+      <AuthProvider>
         <ScrollToTop />
         <Routes>
-          {/* Dashboard Layout */}
-          <Route element={<AppLayout />}>
+          {/* Everything inside here needs a signed-in user */}
+          <Route
+            element={
+              <RequireAuth>
+                <AppLayout />
+              </RequireAuth>
+            }
+          >
             <Route index path="/" element={<Home />} />
-
-            {/* Others Page */}
-            <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
-
-            {/* Forms */}
-            <Route path="/form-elements" element={<FormElements />} />
-
-            {/* Tables */}
-            <Route path="/basic-tables" element={<BasicTables />} />
-
-            {/* Ui Elements */}
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
-
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
+            <Route path="/inventory" element={<InventoryHome />} />
+            <Route path="/inventory/vendors" element={<VendorsPage />} />
+            <Route path="/inventory/categories" element={<CategoriesPage />} />
+            <Route path="/inventory/brands" element={<BrandsPage />} />
+            <Route path="/inventory/new" element={<NewItemPage />} />
+            <Route path="/inventory/search" element={<ItemSearchPage />} />
+            <Route path="/inventory/items/:id" element={<ProductDetailPage />} />
+            {/* <Route path="/customers" element={<CustomersPage />} /> */}
           </Route>
 
-          {/* Auth Layout */}
+          {/* Public */}
           <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
 
-          {/* Fallback Route */}
+          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </Router>
-    </>
+      </AuthProvider>
+    </Router>
   );
 }

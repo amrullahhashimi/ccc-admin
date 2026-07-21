@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE `vendor` ADD COLUMN `address2` TEXT NULL,
+    ADD COLUMN `city` VARCHAR(191) NULL,
+    ADD COLUMN `country` VARCHAR(191) NULL DEFAULT 'CA',
+    ADD COLUMN `postal` VARCHAR(191) NULL,
+    ADD COLUMN `province` VARCHAR(191) NULL;
