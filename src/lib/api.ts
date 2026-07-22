@@ -181,11 +181,15 @@ const body = (data: unknown) => ({ body: JSON.stringify(data) });
 
 export const auth = {
   login: (email: string, password: string) =>
-    request<{ user: User }>("/api/auth/login", { method: "POST", ...body({ email, password }) }),
+    request<{ user: User; needPin: boolean }>("/api/auth/login", { method: "POST", ...body({ email, password }) }),
   logout: () => request<{ ok: true }>("/api/auth/logout", { method: "POST" }),
-  me: () => request<{ user: User }>("/api/auth/me"),
+  me: () => request<{ user: User; locked: boolean; hasPin: boolean }>("/api/auth/me"),
+  unlock: (pin: string) =>
+    request<{ user: User }>("/api/auth/unlock", { method: "POST", ...body({ pin }) }),
   changePassword: (current: string, next: string) =>
     request<{ ok: true }>("/api/auth/password", { method: "POST", ...body({ current, next }) }),
+  setPin: (pin: string) => request<{ ok: true }>("/api/auth/pin", { method: "POST", ...body({ pin }) }),
+  removePin: () => request<{ ok: true }>("/api/auth/pin", { method: "DELETE" }),
 };
 
 /* ---------------------------- products ---------------------------- */

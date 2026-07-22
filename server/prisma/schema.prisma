@@ -19,7 +19,8 @@ model User {
   role         String   @default("STAFF") // OWNER | MANAGER | STAFF | TECH
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
-
+  pinHash String?
+  
   sales           Sale[]
   ticketsAssigned Ticket[] @relation("Technician")
 }

@@ -14,6 +14,7 @@ import BrandsPage from "./pages/Inventory/BrandsPage";
 import NewItemPage from "./pages/Inventory/NewItemPage";
 import ItemSearchPage from "./pages/Inventory/Itemsearchpage";
 import ProductDetailPage from "./pages/Inventory/ProductDetailPage";
+import SettingsPage from "./pages/SettingsPage";
 // import CustomersPage from "./pages/CustomersPage";
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/inventory/new" element={<NewItemPage />} />
             <Route path="/inventory/search" element={<ItemSearchPage />} />
             <Route path="/inventory/items/:id" element={<ProductDetailPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             {/* <Route path="/customers" element={<CustomersPage />} /> */}
           </Route>
 
