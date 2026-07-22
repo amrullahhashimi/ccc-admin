@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const path = require("path");
 const express = require("express");
 const session = require("express-session");
 const { PrismaClient } = require("@prisma/client");
@@ -15,24 +16,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const isProd = process.env.NODE_ENV === "production";
 
-// Behind Railway's HTTPS proxy — needed for secure cookies to work.
+// Behind Railway's HTTPS proxy — needed for secure cookies.
 if (isProd) app.set("trust proxy", 1);
-
-/* ------------------------------ CORS ------------------------------ */
-// The UI and API sit on different subdomains in production, so the browser
-// needs explicit permission to send the session cookie across.
-const FRONTEND_URL = process.env.FRONTEND_URL || "";
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && origin === FRONTEND_URL) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type");
-  }
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
 
 app.use(express.json());
 
@@ -56,16 +41,14 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: isProd ? "none" : "lax", // "none" lets the cookie cross subdomains
-      secure: isProd, // required whenever sameSite is "none"
+      sameSite: "lax", // same-origin now — the API and UI share one address
+      secure: isProd,
       maxAge: 1000 * 60 * 60 * 6, // 6 hours — outlives a full shift
     },
   })
 );
 
 /* --------------------------- auth guards --------------------------- */
-// These use stateOf so the PIN lock and shift expiry are enforced server-side,
-// not just in the browser.
 
 function requireLogin(req, res, next) {
   const state = stateOf(req.session);
@@ -86,7 +69,7 @@ function requireRole(...roles) {
   };
 }
 
-/* ----------------------------- routes ----------------------------- */
+/* ----------------------------- API routes ----------------------------- */
 
 app.use("/api/auth", require("./routes/auth")(prisma));
 app.use("/api/products", requireLogin, require("./routes/products")(prisma, requireRole));
@@ -97,11 +80,19 @@ app.use("/api/brands", requireLogin, require("./routes/brands")(prisma, requireR
 app.use("/api/meta", requireLogin, require("./routes/meta")(prisma, requireRole));
 app.use("/api/dashboard", requireLogin, require("./routes/dashboard")(prisma));
 
-// Health check.
-app.get("/", (_req, res) => {
-  res.json({ service: "CCC Admin API", status: "running" });
+/* -------------------- serve the built React app -------------------- */
+// Vite builds the React app to <repo root>/dist. From server/src that's ../../dist.
+// Anything that isn't /api falls through to index.html so React Router works.
+
+const clientDir = path.join(__dirname, "..", "..", "dist");
+app.use(express.static(clientDir));
+app.get("*", (req, res) => {
+  if (req.path.startsWith("/api")) {
+    return res.status(404).json({ error: "Not found." });
+  }
+  res.sendFile(path.join(clientDir, "index.html"));
 });
 
 app.listen(PORT, () => {
-  console.log(`CCC Admin API → port ${PORT}`);
+  console.log(`CCC Admin → port ${PORT}`);
 });
