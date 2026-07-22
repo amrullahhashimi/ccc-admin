@@ -274,7 +274,11 @@ function SerialsTab({
     setSaving(true);
     try {
       if (editingId) {
-        await productsApi.updateUnit(editingId, { ...form, serial: form.serial.trim() });
+        await productsApi.updateUnit(editingId, {
+          ...form,
+          serial: form.serial.trim(),
+          warrantyMonths: parseInt(form.warrantyMonths, 10),
+        });
         resetForm();
       } else {
         await productsApi.addUnits(product.id, [

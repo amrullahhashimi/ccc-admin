@@ -130,7 +130,7 @@ export function RequireAuth({ children, roles }: { children: ReactNode; roles?: 
 /* ------------------------------ lock screen ------------------------------ */
 
 function LockScreen() {
-  const { user, unlock, signOut } = useAuth();
+  const {unlock, signOut } = useAuth();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
