@@ -5,7 +5,9 @@ function shape(body) {
   [
     "firstName",
     "lastName",
+    "company",
     "phone",
+    "mobile",
     "email",
     "address",
     "city",
@@ -15,6 +17,7 @@ function shape(body) {
     if (body[k] !== undefined) d[k] = body[k] === "" ? null : String(body[k]).trim();
   });
   if (d.email) d.email = d.email.toLowerCase();
+  if (body.contactConsent !== undefined) d.contactConsent = !!body.contactConsent;
   return d;
 }
 
@@ -28,7 +31,9 @@ module.exports = (prisma, requireRole) => {
           OR: [
             { firstName: { contains: q } },
             { lastName: { contains: q } },
+            { company: { contains: q } },
             { phone: { contains: q } },
+            { mobile: { contains: q } },
             { email: { contains: q } },
           ],
         }

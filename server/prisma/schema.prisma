@@ -207,6 +207,10 @@ model Customer {
   notes     String? @db.Text
   createdAt DateTime @default(now())
 
+  company        String?
+  mobile         String?
+  contactConsent Boolean @default(false)
+
   sales    Sale[]
   tickets  Ticket[]
   layaways Layaway[]

@@ -123,11 +123,14 @@ export interface Customer {
   id: string;
   firstName: string;
   lastName?: string | null;
+  company?: string | null;
   phone?: string | null;
+  mobile?: string | null;
   email?: string | null;
   address?: string | null;
   city?: string | null;
   postal?: string | null;
+  contactConsent: boolean;
   notes?: string | null;
   createdAt: string;
   _count?: { sales: number; tickets: number; layaways: number };
@@ -236,13 +239,10 @@ export const products = {
 /* ---------------------------- customers ---------------------------- */
 
 export const customers = {
-  list: (q?: string) =>
-    request<Customer[]>("/api/customers" + (q ? `?q=${encodeURIComponent(q)}` : "")),
+  list: (q = "") => request<Customer[]>(`/api/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   get: (id: string) => request<Customer>(`/api/customers/${id}`),
-  create: (data: Record<string, unknown>) =>
-    request<Customer>("/api/customers", { method: "POST", ...body(data) }),
-  update: (id: string, data: Record<string, unknown>) =>
-    request<Customer>(`/api/customers/${id}`, { method: "PATCH", ...body(data) }),
+  create: (data: Partial<Customer>) => request<Customer>("/api/customers", { method: "POST", ...body(data) }),
+  update: (id: string, data: Partial<Customer>) => request<Customer>(`/api/customers/${id}`, { method: "PATCH", ...body(data) }),
   remove: (id: string) => request<{ ok: true }>(`/api/customers/${id}`, { method: "DELETE" }),
 };
 

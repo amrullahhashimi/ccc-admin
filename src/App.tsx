@@ -15,7 +15,7 @@ import NewItemPage from "./pages/Inventory/NewItemPage";
 import ItemSearchPage from "./pages/Inventory/Itemsearchpage";
 import ProductDetailPage from "./pages/Inventory/ProductDetailPage";
 import SettingsPage from "./pages/SettingsPage";
-// import CustomersPage from "./pages/CustomersPage";
+import CustomersPage from "./pages/Inventory/CustomersPage";
 
 export default function App() {
   return (
@@ -40,7 +40,7 @@ export default function App() {
             <Route path="/inventory/search" element={<ItemSearchPage />} />
             <Route path="/inventory/items/:id" element={<ProductDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            {/* <Route path="/customers" element={<CustomersPage />} /> */}
+            <Route path="/customers" element={<CustomersPage />} />
           </Route>
 
           {/* Public */}
