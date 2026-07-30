@@ -29,7 +29,7 @@ const emptyForm: FormState = {
   mobile: "",
   email: "",
   address: "",
-  city: "Calgary",
+  city: "",
   postal: "",
   contactConsent: false,
   notes: "",
