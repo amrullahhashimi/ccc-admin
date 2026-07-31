@@ -17,6 +17,7 @@ import ProductDetailPage from "./pages/Inventory/ProductDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import CustomersPage from "./pages/Inventory/CustomersPage";
 import ServicePage from "./pages/Inventory/ServicePage";
+import ServiceNewPage from "./pages/Inventory/ServiceNewPage";
 import ServiceDetailPage from "./pages/Inventory/ServiceDetailPage";
 
 export default function App() {
@@ -44,7 +45,7 @@ export default function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/service" element={<ServicePage />} />
-            <Route path="/service/new" element={<ServiceDetailPage />} />
+            <Route path="/service/new" element={<ServiceNewPage />} />
             <Route path="/service/:id" element={<ServiceDetailPage />} />
           </Route>
 

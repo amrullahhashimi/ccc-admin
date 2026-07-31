@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {
   service as serviceApi,
-  customers as customersApi,
   products as productsApi,
   meta as metaApi,
   SERVICE_STATUSES,
   money,
   type Service,
   type ServiceLine,
-  type Customer,
   type Product,
   type Meta,
 } from "../../lib/api";
@@ -22,102 +20,18 @@ const panelClass = "rounded-xl border border-gray-200 bg-white dark:border-gray-
 
 const lineTotal = (l: ServiceLine) => l.quantity * l.priceCents;
 
-/* ============================ NEW (create) ============================ */
+/* ------------------------------ lines panel ------------------------------ */
 
-function NewService({ presetCustomer }: { presetCustomer: string | null }) {
-  const navigate = useNavigate();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [form, setForm] = useState({
-    customerId: presetCustomer ?? "",
-    deviceMake: "",
-    deviceModel: "",
-    deviceImei: "",
-    passcode: "",
-    issue: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    customersApi.list("").then(setCustomers).catch(() => {});
-  }, []);
-
-  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
-
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.customerId) return setError("Pick a customer.");
-    if (!form.issue.trim()) return setError("Describe the problem.");
-    setSaving(true);
-    setError("");
-    try {
-      const created = await serviceApi.create(form);
-      navigate(`/service/${created.id}`, { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create.");
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate("/service")} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-        </button>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">New service order</h1>
-      </div>
-
-      <form onSubmit={create} className={`${panelClass} space-y-5 p-6`}>
-        <div>
-          <label className={labelClass}>Customer <span className="text-error-500">*</span></label>
-          <select className={inputClass} value={form.customerId} onChange={(e) => set("customerId", e.target.value)}>
-            <option value="">Select a customer…</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {[c.firstName, c.lastName].filter(Boolean).join(" ")}{c.phone ? ` · ${c.phone}` : ""}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1.5 text-xs text-gray-500">Not listed? Add them on the Customers page first.</p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div><label className={labelClass}>Device make</label><input className={inputClass} value={form.deviceMake} onChange={(e) => set("deviceMake", e.target.value)} placeholder="Apple, Samsung…" /></div>
-          <div><label className={labelClass}>Model</label><input className={inputClass} value={form.deviceModel} onChange={(e) => set("deviceModel", e.target.value)} placeholder="iPhone 14 Pro" /></div>
-          <div><label className={labelClass}>IMEI / serial</label><input className={inputClass} value={form.deviceImei} onChange={(e) => set("deviceImei", e.target.value)} /></div>
-          <div><label className={labelClass}>Passcode</label><input className={inputClass} value={form.passcode} onChange={(e) => set("passcode", e.target.value)} placeholder="To unlock for testing" /></div>
-        </div>
-
-        <div>
-          <label className={labelClass}>Problem reported <span className="text-error-500">*</span></label>
-          <textarea rows={3} className={`${inputClass} h-auto`} value={form.issue} onChange={(e) => set("issue", e.target.value)} placeholder="Cracked screen, won't charge…" />
-        </div>
-
-        {error && <p className="rounded-lg bg-error-50 px-4 py-3 text-sm text-error-600 dark:bg-error-500/15">{error}</p>}
-
-        <button type="submit" disabled={saving} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60">
-          {saving ? "Creating…" : "Create service order"}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-/* ============================ line editor ============================ */
-
-function LinesPanel({ svc, meta, onChanged }: { svc: Service; meta: Meta | null; onChanged: () => void }) {
+function LinesPanel({ svc, onChanged }: { svc: Service; onChanged: () => void }) {
   const [tab, setTab] = useState<"part" | "labour">("part");
   const [error, setError] = useState("");
 
-  // part form
   const [productId, setProductId] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [qty, setQty] = useState("1");
   const [partPrice, setPartPrice] = useState("");
 
-  // labour form
   const [labourName, setLabourName] = useState("");
   const [labourPrice, setLabourPrice] = useState("");
 
@@ -136,9 +50,7 @@ function LinesPanel({ svc, meta, onChanged }: { svc: Service; meta: Meta | null;
       await serviceApi.addLine(svc.id, { productId, quantity: qty, price: partPrice });
       setProductId(""); setProductQuery(""); setResults([]); setQty("1"); setPartPrice("");
       onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add part.");
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not add part."); }
   };
 
   const addLabour = async () => {
@@ -148,9 +60,7 @@ function LinesPanel({ svc, meta, onChanged }: { svc: Service; meta: Meta | null;
       await serviceApi.addLine(svc.id, { name: labourName, price: labourPrice, quantity: 1 });
       setLabourName(""); setLabourPrice("");
       onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add labour.");
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not add labour."); }
   };
 
   const removeLine = async (line: ServiceLine) => {
@@ -171,19 +81,14 @@ function LinesPanel({ svc, meta, onChanged }: { svc: Service; meta: Meta | null;
       <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">{line.quantity}</td>
       <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">{money(line.priceCents)}</td>
       <td className="px-5 py-3 text-right text-sm font-medium tabular-nums text-gray-800 dark:text-white/90">{money(lineTotal(line))}</td>
-      <td className="px-5 py-3 text-right">
-        <button onClick={() => removeLine(line)} className="text-xs font-medium text-error-500 hover:text-error-600">Remove</button>
-      </td>
+      <td className="px-5 py-3 text-right"><button onClick={() => removeLine(line)} className="text-xs font-medium text-error-500 hover:text-error-600">Remove</button></td>
     </tr>
   );
 
   return (
     <div className={panelClass}>
-      <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-        <h2 className="font-semibold text-gray-800 dark:text-white/90">Parts & labour</h2>
-      </div>
+      <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800"><h2 className="font-semibold text-gray-800 dark:text-white/90">Parts & labour</h2></div>
 
-      {/* add controls */}
       <div className="border-b border-gray-100 p-6 dark:border-gray-800">
         <div className="mb-4 flex gap-1">
           {(["part", "labour"] as const).map((t) => (
@@ -197,8 +102,7 @@ function LinesPanel({ svc, meta, onChanged }: { svc: Service; meta: Meta | null;
         {tab === "part" ? (
           <div className="space-y-3">
             <div className="relative">
-              <input className={inputClass} placeholder="Search inventory…" value={productQuery}
-                onChange={(e) => { setProductQuery(e.target.value); setProductId(""); }} />
+              <input className={inputClass} placeholder="Search inventory…" value={productQuery} onChange={(e) => { setProductQuery(e.target.value); setProductId(""); }} />
               {results.length > 0 && !productId && (
                 <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
                   {results.map((p) => (
@@ -228,24 +132,19 @@ function LinesPanel({ svc, meta, onChanged }: { svc: Service; meta: Meta | null;
         {error && <p className="mt-3 text-sm text-error-500">{error}</p>}
       </div>
 
-      {/* lines */}
       {(svc.parts?.length ?? 0) === 0 ? (
         <p className="p-8 text-center text-sm text-gray-500">No parts or labour added yet.</p>
       ) : (
         <table className="w-full">
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {parts.length > 0 && (
-              <>
-                <tr><td colSpan={5} className="bg-gray-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-white/[0.02]">Parts</td></tr>
-                {parts.map((l) => <Row key={l.id} line={l} />)}
-              </>
-            )}
-            {labour.length > 0 && (
-              <>
-                <tr><td colSpan={5} className="bg-gray-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-white/[0.02]">Labour</td></tr>
-                {labour.map((l) => <Row key={l.id} line={l} />)}
-              </>
-            )}
+            {parts.length > 0 && (<>
+              <tr><td colSpan={5} className="bg-gray-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-white/[0.02]">Parts</td></tr>
+              {parts.map((l) => <Row key={l.id} line={l} />)}
+            </>)}
+            {labour.length > 0 && (<>
+              <tr><td colSpan={5} className="bg-gray-50 px-5 py-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:bg-white/[0.02]">Labour</td></tr>
+              {labour.map((l) => <Row key={l.id} line={l} />)}
+            </>)}
           </tbody>
         </table>
       )}
@@ -253,11 +152,13 @@ function LinesPanel({ svc, meta, onChanged }: { svc: Service; meta: Meta | null;
   );
 }
 
-/* ============================ EDIT (detail) ============================ */
+/* -------------------------------- the page -------------------------------- */
 
-function EditService({ id }: { id: string }) {
+export default function ServiceDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { can } = useAuth();
+
   const [svc, setSvc] = useState<Service | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -266,18 +167,18 @@ function EditService({ id }: { id: string }) {
 
   const [form, setForm] = useState({
     deviceMake: "", deviceModel: "", deviceImei: "", passcode: "",
-    issue: "", diagnosis: "", status: "INTAKE", locationId: "", technicianId: "", deposit: "",
+    issue: "", diagnosis: "", status: "INTAKE", locationId: "", deposit: "",
   });
 
   const load = useCallback(async () => {
+    if (!id) return;
     try {
       const s = await serviceApi.get(id);
       setSvc(s);
       setForm({
         deviceMake: s.deviceMake ?? "", deviceModel: s.deviceModel ?? "", deviceImei: s.deviceImei ?? "",
         passcode: s.passcode ?? "", issue: s.issue, diagnosis: s.diagnosis ?? "", status: s.status,
-        locationId: s.locationId ?? "", technicianId: s.technicianId ?? "",
-        deposit: s.depositCents ? (s.depositCents / 100).toFixed(2) : "",
+        locationId: s.locationId ?? "", deposit: s.depositCents ? (s.depositCents / 100).toFixed(2) : "",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load.");
@@ -290,18 +191,20 @@ function EditService({ id }: { id: string }) {
   const set = (k: keyof typeof form, v: string) => { setForm((f) => ({ ...f, [k]: v })); setSaved(false); };
 
   const save = async () => {
+    if (!id) return;
     try { await serviceApi.update(id, form); setSaved(true); load(); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not save."); }
   };
 
   const setStatus = async (status: string) => {
+    if (!id) return;
     set("status", status);
     try { await serviceApi.update(id, { status }); load(); }
     catch (err) { alert(err instanceof Error ? err.message : "Could not update status."); }
   };
 
   const remove = async () => {
-    if (!svc || !confirm(`Delete service #${svc.number}? This can't be undone.`)) return;
+    if (!svc || !id || !confirm(`Delete service #${svc.number}? This can't be undone.`)) return;
     try { await serviceApi.remove(id); navigate("/service"); }
     catch (err) { alert(err instanceof Error ? err.message : "Could not delete."); }
   };
@@ -347,7 +250,7 @@ function EditService({ id }: { id: string }) {
             </div>
           </div>
 
-          <LinesPanel svc={svc} meta={meta} onChanged={load} />
+          <LinesPanel svc={svc} onChanged={load} />
         </div>
 
         <div className="space-y-5">
@@ -372,7 +275,7 @@ function EditService({ id }: { id: string }) {
             <div className="space-y-4 p-5">
               <div>
                 <label className={labelClass}>Location</label>
-                <select className={inputClass} value={form.locationId} onChange={(e) => { set("locationId", e.target.value); serviceApi.update(id, { locationId: e.target.value }).then(load); }}>
+                <select className={inputClass} value={form.locationId} onChange={(e) => { set("locationId", e.target.value); if (id) serviceApi.update(id, { locationId: e.target.value }).then(load); }}>
                   <option value="">—</option>
                   {meta?.locations.map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
                 </select>
@@ -388,23 +291,10 @@ function EditService({ id }: { id: string }) {
           </div>
 
           {can("OWNER", "MANAGER") && (
-            <button onClick={remove} className="w-full rounded-lg border border-error-500 px-4 py-2.5 text-sm font-medium text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10">
-              Delete service order
-            </button>
+            <button onClick={remove} className="w-full rounded-lg border border-error-500 px-4 py-2.5 text-sm font-medium text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10">Delete service order</button>
           )}
         </div>
       </div>
     </div>
   );
-}
-
-/* ============================ router entry ============================ */
-
-export default function ServiceDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const [params] = useSearchParams();
-
-  if (id === "new") return <NewService presetCustomer={params.get("customerId")} />;
-  if (!id) return null;
-  return <EditService id={id} />;
 }
