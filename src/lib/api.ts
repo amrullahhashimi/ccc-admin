@@ -292,6 +292,42 @@ export const categories = {
     }),
 };
 
+/* ----------------------------- Service ----------------------------- */
+
+export interface ServiceLine {
+  id: string;
+  productId?: string | null;
+  product?: { id: string; name: string; sku: string } | null;
+  name: string;
+  quantity: number;
+  priceCents: number;
+}
+
+export interface Service {
+  id: string;
+  number: number;
+  customerId: string;
+  customer?: { id: string; firstName: string; lastName?: string | null; phone?: string | null; mobile?: string | null };
+  deviceMake?: string | null;
+  deviceModel?: string | null;
+  deviceImei?: string | null;
+  passcode?: string | null;
+  issue: string;
+  diagnosis?: string | null;
+  status: string;
+  estimateCents: number;
+  depositCents: number;
+  technicianId?: string | null;
+  technician?: { id: string; name: string } | null;
+  locationId?: string | null;
+  location?: { id: string; name: string } | null;
+  parts?: ServiceLine[];
+  partsCents?: number;
+  labourCents?: number;
+  totalCents?: number;
+  createdAt: string;
+}
+
 /* ----------------------------- dashboard ----------------------------- */
 
 export interface Dashboard {
@@ -353,6 +389,15 @@ export const CONDITIONS: { value: string; label: string }[] = [
   { value: "FOR_PARTS", label: "For parts" },
 ];
 
+export const SERVICE_STATUSES = [
+  { value: "INTAKE", label: "Open" },
+  { value: "DIAGNOSING", label: "In progress" },
+  { value: "WAITING_PARTS", label: "Waiting for parts" },
+  { value: "READY", label: "Done" },
+  { value: "COLLECTED", label: "Picked up" },
+  { value: "CANCELLED", label: "Cancelled" },
+];
+
 export const WARRANTY_MONTHS: { value: number; label: string }[] = [
   { value: 0, label: "No warranty" },
   { value: 3, label: "3 months" },
@@ -379,3 +424,19 @@ export const money = (cents?: number | null) =>
 
 export const conditionLabel = (value: string) =>
   CONDITIONS.find((c) => c.value === value)?.label ?? value;
+
+export const service = {
+  list: (params: { q?: string; status?: string; customerId?: string } = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v) as [string, string][]
+    ).toString();
+    return request<Service[]>(`/api/service${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => request<Service>(`/api/service/${id}`),
+  create: (data: Record<string, unknown>) => request<Service>("/api/service", { method: "POST", ...body(data) }),
+  update: (id: string, data: Record<string, unknown>) => request<Service>(`/api/service/${id}`, { method: "PATCH", ...body(data) }),
+  remove: (id: string) => request<{ ok: true }>(`/api/service/${id}`, { method: "DELETE" }),
+  addLine: (id: string, data: Record<string, unknown>) => request<ServiceLine>(`/api/service/${id}/lines`, { method: "POST", ...body(data) }),
+  updateLine: (lineId: string, data: Record<string, unknown>) => request<ServiceLine>(`/api/service/lines/${lineId}`, { method: "PATCH", ...body(data) }),
+  removeLine: (lineId: string) => request<{ ok: true }>(`/api/service/lines/${lineId}`, { method: "DELETE" }),
+};

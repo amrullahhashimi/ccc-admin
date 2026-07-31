@@ -79,6 +79,7 @@ app.use("/api/categories", requireLogin, require("./routes/categories")(prisma, 
 app.use("/api/brands", requireLogin, require("./routes/brands")(prisma, requireRole));
 app.use("/api/meta", requireLogin, require("./routes/meta")(prisma, requireRole));
 app.use("/api/dashboard", requireLogin, require("./routes/dashboard")(prisma));
+app.use("/api/service", requireLogin, require("./routes/service")(prisma, requireRole));
 
 /* -------------------- serve the built React app -------------------- */
 // Vite builds the React app to <repo root>/dist. From server/src that's ../../dist.

@@ -32,6 +32,15 @@ const navItems: NavItem[] = [
     name: "Customers",
     path: "/customers",
   },
+  {
+    name: "Service",
+    path: "/service",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.4-.6-.6-2.4 2.1-2.1z" />
+      </svg>
+    ),
+}
 ];
 
 const AppSidebar: React.FC = () => {

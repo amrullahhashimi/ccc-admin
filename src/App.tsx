@@ -16,6 +16,8 @@ import ItemSearchPage from "./pages/Inventory/Itemsearchpage";
 import ProductDetailPage from "./pages/Inventory/ProductDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import CustomersPage from "./pages/Inventory/CustomersPage";
+import ServicePage from "./pages/Inventory/ServicePage";
+import ServiceDetailPage from "./pages/Inventory/ServiceDetailPage";
 
 export default function App() {
   return (
@@ -41,6 +43,9 @@ export default function App() {
             <Route path="/inventory/items/:id" element={<ProductDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/service" element={<ServicePage />} />
+            <Route path="/service/new" element={<ServiceDetailPage />} />
+            <Route path="/service/:id" element={<ServiceDetailPage />} />
           </Route>
 
           {/* Public */}
