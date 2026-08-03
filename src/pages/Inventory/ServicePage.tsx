@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { service as serviceApi, SERVICE_STATUSES, money, type Service } from "../../lib/api";
 
 const inputClass =
@@ -21,11 +21,14 @@ const statusColour = (v: string) => {
 
 export default function ServicePage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+
   const [rows, setRows] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("");
+  // Start from the URL (?status=COLLECTED for the Finished tile), then let the user change it.
+  const [status, setStatus] = useState(params.get("status") ?? "");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,11 +53,14 @@ export default function ServicePage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Service</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {rows.length} {rows.length === 1 ? "order" : "orders"}
-          </p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate("/service")} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back to service">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Service orders</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{rows.length} {rows.length === 1 ? "order" : "orders"}</p>
+          </div>
         </div>
         <button onClick={() => navigate("/service/new")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
           New service
