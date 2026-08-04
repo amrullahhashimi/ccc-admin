@@ -118,7 +118,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
     <div class="meta">
       <div>
         <h3>Customer</h3>
-        <p>${esc(customerOf(s))}<br>${esc(phoneOf(s))}${s.customer?.email ? "<br>" + esc(s.customer.email) : ""}</p>
+        <p>${esc(customerOf(s))}<br>${esc(phoneOf(s))}</p>
       </div>
       <div>
         <h3>Device</h3>

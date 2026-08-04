@@ -307,7 +307,7 @@ export interface Service {
   id: string;
   number: number;
   customerId: string;
-  customer?: { id: string; firstName: string; lastName?: string | null; phone?: string | null; mobile?: string | null };
+  customer?: { id: string; firstName: string; lastName?: string | null; phone?: string | null; mobile?: string | null; email?: string | null };
   deviceMake?: string | null;
   deviceModel?: string | null;
   deviceImei?: string | null;
