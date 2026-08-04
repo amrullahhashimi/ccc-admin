@@ -21,6 +21,7 @@ import ServicePage from "./pages/Inventory/ServicePage";
 import ServiceNewPage from "./pages/Inventory/ServiceNewPage";
 import TrackPage from "./pages/Inventory/Trackpage";
 
+
 export default function App() {
   return (
     <Router>
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/service/orders" element={<ServicePage />} />
             <Route path="/service/new" element={<ServiceNewPage />} />
             <Route path="/service/:id" element={<ServiceNewPage />} />
+            
           </Route>
 
           {/* Public */}

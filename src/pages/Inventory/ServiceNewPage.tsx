@@ -6,6 +6,7 @@ import {
   type Service, type ServiceLine, type Customer, type Product, type Meta,
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { printTag, printInvoice } from "../Utils/Printservice";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -584,6 +585,12 @@ export default function ServiceNewPage() {
             <span className="text-xs text-gray-400">
               {saveState === "saving" ? "Saving…" : saveState === "saved" ? "All changes saved" : ""}
             </span>
+          )}
+          {isEdit && svc && (
+            <>
+              <button type="button" onClick={() => printTag(svc)} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print tag</button>
+              <button type="button" onClick={() => printInvoice(svc, { trackUrl: svc.trackToken ? `${window.location.origin}/track/${svc.trackToken}` : undefined })} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print invoice</button>
+            </>
           )}
           {isEdit && (
             <select value={form.status} onChange={(e) => setStatus(e.target.value)} className="h-11 rounded-lg border border-gray-300 bg-transparent px-4 text-sm font-medium text-gray-800 dark:border-gray-700 dark:text-white/90 dark:bg-gray-900">
