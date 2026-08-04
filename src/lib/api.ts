@@ -326,6 +326,12 @@ export interface Service {
   labourCents?: number;
   totalCents?: number;
   createdAt: string;
+  warranty?: boolean;
+  dateIn?: string | null;
+  promisedAt?: string | null;
+  receiptNote?: string | null;
+  externalNote?: string | null;
+  internalNote?: string | null;
 }
 
 /* ----------------------------- dashboard ----------------------------- */

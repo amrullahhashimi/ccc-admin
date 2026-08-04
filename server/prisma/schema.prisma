@@ -235,6 +235,12 @@ model Ticket {
   issue       String  @db.Text
   diagnosis   String? @db.Text
 
+  warranty     Boolean   @default(false)
+  dateIn       DateTime?
+  receiptNote  String?   @db.Text
+  externalNote String?   @db.Text
+  internalNote String?   @db.Text
+
   status String @default("INTAKE") // INTAKE | DIAGNOSING | WAITING_PARTS | READY | COLLECTED | CANCELLED
 
   estimateCents Int @default(0)

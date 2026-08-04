@@ -15,12 +15,16 @@ function withTotals(t) {
 
 function shapeService(body) {
   const d = {};
-  ["deviceMake", "deviceModel", "deviceImei", "passcode", "issue", "diagnosis"].forEach((k) => {
+  ["deviceMake", "deviceModel", "deviceImei", "passcode", "issue", "diagnosis",
+   "receiptNote", "externalNote", "internalNote"].forEach((k) => {
     if (body[k] !== undefined) d[k] = body[k] === "" ? null : String(body[k]).trim();
   });
   if (body.status !== undefined && STATUSES.includes(body.status)) d.status = body.status;
+  if (body.warranty !== undefined) d.warranty = !!body.warranty;
   if (body.technicianId !== undefined) d.technicianId = body.technicianId || null;
   if (body.locationId !== undefined) d.locationId = body.locationId || null;
+  if (body.dateIn !== undefined) d.dateIn = body.dateIn ? new Date(body.dateIn) : null;
+  if (body.promisedAt !== undefined) d.promisedAt = body.promisedAt ? new Date(body.promisedAt) : null;
   if (body.estimate !== undefined && body.estimate !== "") {
     d.estimateCents = Math.round(parseFloat(body.estimate) * 100) || 0;
   }
