@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const express = require("express");
 
 // Stored enum (the DB model is still `Ticket`) ← → what the UI shows.
@@ -103,6 +104,7 @@ module.exports = (prisma, requireRole) => {
         data: {
           number,
           customerId: req.body.customerId,
+          trackToken: crypto.randomBytes(16).toString("hex"),
           ...shapeService(req.body),
           issue: (req.body.issue ?? "").toString().trim(),
           status: STATUSES.includes(req.body.status) ? req.body.status : "INTAKE",

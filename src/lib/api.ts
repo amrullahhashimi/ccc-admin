@@ -332,6 +332,7 @@ export interface Service {
   receiptNote?: string | null;
   externalNote?: string | null;
   internalNote?: string | null;
+  trackToken?: string | null;
 }
 
 /* ----------------------------- dashboard ----------------------------- */

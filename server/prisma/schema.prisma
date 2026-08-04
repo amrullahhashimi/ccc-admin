@@ -259,6 +259,8 @@ model Ticket {
 
   parts TicketPart[]
   sale  Sale?
+
+  trackToken String? @unique
 }
 
 model TicketPart {
