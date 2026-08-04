@@ -393,6 +393,7 @@ export default function ServiceNewPage() {
     status: "INTAKE", locationId: "", deposit: "",
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [copied, setCopied] = useState(false);
   const dirtyRef = useRef(false);
   const setF = (k: keyof typeof form, v: string | boolean) => { dirtyRef.current = true; setForm((f) => ({ ...f, [k]: v })); };
 
@@ -509,6 +510,13 @@ export default function ServiceNewPage() {
   }, [form.device, form.deviceImei, form.passcode, form.warranty, form.dateInDate, form.dateInTime, form.dueDate, form.dueTime, form.issue, form.receiptNote, form.internalNote, form.deposit]);
   const setStatus = async (status: string) => { if (!id) return; setF("status", status); try { await serviceApi.update(id, { status }); load(); } catch (err) { alert(err instanceof Error ? err.message : "Could not update status."); } };
   const remove = async () => { if (!svc || !id || !confirm(`Delete service #${svc.number}?`)) return; try { await serviceApi.remove(id); navigate("/service"); } catch (err) { alert(err instanceof Error ? err.message : "Could not delete."); } };
+
+  const copyTrack = async () => {
+    if (!svc?.trackToken) return;
+    const url = `${window.location.origin}/track/${svc.trackToken}`;
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { window.prompt("Copy this tracking link:", url); }
+  };
 
   if (isEdit && loading) return <p className="p-10 text-center text-sm text-gray-500">Loading…</p>;
   if (isEdit && (error && !svc)) return <p className="p-10 text-center text-sm text-error-500">{error}</p>;
@@ -632,13 +640,29 @@ export default function ServiceNewPage() {
         {isEdit && svc && (
           <div className="space-y-5">
             <div className={`${panelClass} lg:sticky lg:top-4`}>
-              <dl className="divide-y divide-gray-100 dark:divide-gray-800">
-                <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">Labour</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">{money(svc.labourCents ?? 0)}</dd></div>
-                <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">Parts</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">{money(svc.partsCents ?? 0)}</dd></div>
-                <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">Deposit</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">-{money(svc.depositCents ?? 0)}</dd></div>
-                <div className="flex items-center justify-between px-5 py-4"><dt className="text-base font-semibold text-gray-800 dark:text-white/90">Total</dt><dd className="text-lg font-semibold tabular-nums text-gray-800 dark:text-white/90">{money((svc.totalCents ?? 0) - (svc.depositCents ?? 0))}</dd></div>
-              </dl>
+              {(() => {
+                const subtotal = svc.totalCents ?? 0;
+                const gst = Math.round(subtotal * 0.05);
+                const deposit = svc.depositCents ?? 0;
+                const grand = subtotal + gst - deposit;
+                return (
+                  <dl className="divide-y divide-gray-100 dark:divide-gray-800">
+                    <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">Labour</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">{money(svc.labourCents ?? 0)}</dd></div>
+                    <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">Parts</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">{money(svc.partsCents ?? 0)}</dd></div>
+                    <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">Subtotal</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">{money(subtotal)}</dd></div>
+                    <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">GST (5%)</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">{money(gst)}</dd></div>
+                    {deposit > 0 && <div className="flex items-center justify-between px-5 py-3"><dt className="text-sm text-gray-500">Deposit</dt><dd className="text-sm tabular-nums text-gray-700 dark:text-gray-300">-{money(deposit)}</dd></div>}
+                    <div className="flex items-center justify-between px-5 py-4"><dt className="text-base font-semibold text-gray-800 dark:text-white/90">Total</dt><dd className="text-lg font-semibold tabular-nums text-gray-800 dark:text-white/90">{money(grand)}</dd></div>
+                  </dl>
+                );
+              })()}
             </div>
+
+            {svc.trackToken && (
+              <button type="button" onClick={copyTrack} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">
+                {copied ? "Link copied!" : "Copy tracking link"}
+              </button>
+            )}
 
             {can("OWNER", "MANAGER") && <button type="button" onClick={remove} className="w-full rounded-lg border border-error-500 px-4 py-2.5 text-sm font-medium text-error-500 hover:bg-error-50 dark:hover:bg-error-500/10">Delete service order</button>}
           </div>

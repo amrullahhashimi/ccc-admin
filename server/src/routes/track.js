@@ -12,7 +12,7 @@ module.exports = (prisma) => {
         include: {
           customer: { select: { firstName: true } },
           location: { select: { name: true } },
-          parts: { select: { productId: true, quantity: true, priceCents: true } },
+          parts: { select: { name: true, productId: true, quantity: true, priceCents: true }, orderBy: { id: "asc" } },
         },
       });
       if (!t) return res.status(404).json({ error: "We couldn't find that repair." });
@@ -20,7 +20,15 @@ module.exports = (prisma) => {
       const parts = t.parts ?? [];
       const partsCents = parts.filter((p) => p.productId).reduce((s, p) => s + (p.quantity || 0) * (p.priceCents || 0), 0);
       const labourCents = parts.filter((p) => !p.productId).reduce((s, p) => s + (p.quantity || 0) * (p.priceCents || 0), 0);
-      const totalCents = partsCents + labourCents;
+      const lineItems = parts.map((p) => ({
+        name: p.name,
+        quantity: p.quantity,
+        priceCents: p.priceCents,
+        totalCents: (p.quantity || 0) * (p.priceCents || 0),
+      }));
+      const subtotalCents = partsCents + labourCents;
+      const gstCents = Math.round(subtotalCents * 0.05);
+      const totalCents = subtotalCents + gstCents;
 
       res.json({
         number: t.number,
@@ -33,8 +41,9 @@ module.exports = (prisma) => {
         completedAt: t.completedAt,
         location: t.location?.name ?? null,
         customerName: t.customer?.firstName ?? "",
-        partsCents,
-        labourCents,
+        lineItems,
+        subtotalCents,
+        gstCents,
         totalCents,
         depositCents: t.depositCents,
         balanceCents: totalCents - t.depositCents,

@@ -19,6 +19,7 @@ import CustomersPage from "./pages/Inventory/CustomersPage";
 import ServiceHome from "./pages/Inventory/ServiceHome";
 import ServicePage from "./pages/Inventory/ServicePage";
 import ServiceNewPage from "./pages/Inventory/ServiceNewPage";
+import TrackPage from "./pages/Inventory/Trackpage";
 
 export default function App() {
   return (
@@ -55,6 +56,10 @@ export default function App() {
 
           {/* Fallback */}
           <Route path="*" element={<NotFound />} />
+          {/* Public — no login */}
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/track/:token" element={<TrackPage />} />
+
         </Routes>
       </AuthProvider>
     </Router>
