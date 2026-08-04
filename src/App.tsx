@@ -19,7 +19,6 @@ import CustomersPage from "./pages/Inventory/CustomersPage";
 import ServiceHome from "./pages/Inventory/ServiceHome";
 import ServicePage from "./pages/Inventory/ServicePage";
 import ServiceNewPage from "./pages/Inventory/ServiceNewPage";
-import ServiceDetailPage from "./pages/Inventory/ServiceDetailPage";
 
 export default function App() {
   return (
@@ -48,7 +47,7 @@ export default function App() {
             <Route path="/service" element={<ServiceHome />} />
             <Route path="/service/orders" element={<ServicePage />} />
             <Route path="/service/new" element={<ServiceNewPage />} />
-            <Route path="/service/:id" element={<ServiceDetailPage />} />
+            <Route path="/service/:id" element={<ServiceNewPage />} />
           </Route>
 
           {/* Public */}

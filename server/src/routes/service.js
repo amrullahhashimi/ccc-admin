@@ -92,9 +92,6 @@ module.exports = (prisma, requireRole) => {
   router.post("/", async (req, res) => {
     try {
       if (!req.body?.customerId) return res.status(400).json({ error: "Pick a customer." });
-      if (!req.body?.issue || !String(req.body.issue).trim()) {
-        return res.status(400).json({ error: "Describe the problem." });
-      }
       const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
       if (!customer) return res.status(400).json({ error: "That customer no longer exists." });
 
@@ -107,7 +104,7 @@ module.exports = (prisma, requireRole) => {
           number,
           customerId: req.body.customerId,
           ...shapeService(req.body),
-          issue: String(req.body.issue).trim(),
+          issue: (req.body.issue ?? "").toString().trim(),
           status: STATUSES.includes(req.body.status) ? req.body.status : "INTAKE",
         },
         include,
