@@ -99,7 +99,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   <style>
     @page { size: A4 portrait; margin: 8mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.3; margin: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 16px; line-height: 1.3; margin: 0; }
 
     /* header: logo + contact on the left, INVOICE + QR on the right */
     .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;
