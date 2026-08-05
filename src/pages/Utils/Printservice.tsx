@@ -13,18 +13,17 @@ const customerOf = (s: Service) =>
   s.customer ? [s.customer.firstName, s.customer.lastName].filter(Boolean).join(" ") : "—";
 const phoneOf = (s: Service) => s.customer?.phone || s.customer?.mobile || "—";
 
-// Open a print window, write HTML, print, and close.
+// Open a print window, write HTML, print.
 function printHtml(html: string) {
-  const w = window.open("", "_blank", "width=800,height=600");
+  const w = window.open("", "_blank", "width=900,height=700");
   if (!w) { alert("Please allow pop-ups to print."); return; }
   w.document.write(html);
   w.document.close();
   w.focus();
-  // Give the browser a moment to lay out (and load the QR image) before printing.
   setTimeout(() => { w.print(); }, 400);
 }
 
-/* ------------------------------- TAG (DYMO 1.125" x 3.5") ------------------------------- */
+/* ------------------------- TAG (DYMO 3.5" x 1.125") ------------------------- */
 export function printTag(s: Service) {
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Tag ${esc(s.number)}</title>
   <style>
@@ -38,17 +37,6 @@ export function printTag(s: Service) {
     .device { font-size: 10pt; font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .problem { font-size: 8pt; margin-top: 2px; line-height: 1.15; max-height: 0.42in; overflow: hidden; }
     .lbl { font-size: 6pt; color: #444; text-transform: uppercase; letter-spacing: .04em; }
-    .terms { margin-top: 12px; padding-top: 10px; border-top: 1px solid #ddd; page-break-inside: avoid; }
-    .terms h3 { font-size: 22px; text-transform: uppercase; letter-spacing: .06em; color: #555; margin: 0 0 8px; }
-    .terms ol { margin: 0; padding-left: 16px; }
-    .terms li { font-size: 22px; line-height: 1.3; color: #333; margin-bottom: 3px; }
-    .terms .agree { font-size: 22px; font-weight: 700; margin: 12px 0 16px; color: #111; }
-    .sign { display: flex; gap: 40px; align-items: flex-end; flex-wrap: nowrap; }
-    .sigcol:first-child { width: 200px; }
-    .sigcol:last-child { width: 140px; }
-    .sigline { border-bottom: 1px solid #333; height: 34px; display:flex; align-items:flex-end; padding-bottom:2px; font-size:11px; }
-    .sigimg { height: 21px; max-width: 85px; object-fit: contain; object-position: left bottom; border-bottom: 1px solid #333; display:block; }
-    .sigcap { font-size: 14px; color: #666; margin-top: 4px; }
   </style></head>
   <body>
     <div class="tag">
@@ -71,10 +59,9 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
     chinatown: "132 3 Ave SE #2, Calgary, AB T2G 0B6",
   };
   const locName = (typeof s.location === "string" ? s.location : s.location?.name ?? "").toLowerCase();
-  const storeAddress =
-    Object.keys(ADDRESSES).find((k) => locName.includes(k))
-      ? ADDRESSES[Object.keys(ADDRESSES).find((k) => locName.includes(k))!]
-      : "";
+  const addrKey = Object.keys(ADDRESSES).find((k) => locName.includes(k));
+  const storeAddress = addrKey ? ADDRESSES[addrKey] : "";
+
   const parts = (s.parts ?? []).map((l) => ({
     name: l.name, qty: l.quantity, each: l.priceCents, total: l.quantity * l.priceCents,
   }));
@@ -85,7 +72,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   const balance = total - deposit;
 
   const qr = opts?.trackUrl
-    ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(opts.trackUrl)}" width="120" height="120" alt="Track" />`
+    ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(opts.trackUrl)}" width="150" height="150" alt="Track" />`
     : "";
 
   const rows = parts.length
@@ -97,39 +84,49 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
       </tr>`).join("")
     : `<tr><td colspan="4" class="muted">No items yet.</td></tr>`;
 
+  // Signature: inline-styled so nothing can override it. Small (85x21-ish box),
+  // sitting on the same line as the date.
+  const signatureBlock = s.signatureData
+    ? `<img src="${s.signatureData}" alt="Signature" style="height:42px;width:110px;object-fit:contain;object-position:left bottom;display:inline-block;vertical-align:bottom;border-bottom:1px solid #333;" />`
+    : `<span style="display:inline-block;width:180px;border-bottom:1px solid #333;height:24px;vertical-align:bottom;"></span>`;
+
+  const dateBlock = `<span style="display:inline-block;width:120px;border-bottom:1px solid #333;height:24px;vertical-align:bottom;text-align:center;font-size:14px;">${s.signedAt ? esc(new Date(s.signedAt).toLocaleDateString()) : ""}</span>`;
+
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${esc(s.number)}</title>
   <style>
     @page { size: A4 portrait; margin: 7mm; }
-    @media print { html, body { -webkit-print-color-adjust: exact; } }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 16px; line-height: 1.4; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 16px; line-height: 1.35; }
     .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 12px; }
     .store { font-size: 25px; font-weight: 800; letter-spacing: -.2px; }
     .sub { color: #666; font-size: 15px; margin-top: 2px; }
     .addr { color: #444; font-size: 15px; margin-top: 3px; }
     .title { text-align: right; }
     .title h1 { margin: 0; font-size: 26px; letter-spacing: 2px; color: #111; }
-    .title .no { color: #666; margin-top: 4px; font-size: 17px; }
+    .title .no { color: #666; margin-top: 4px; font-size: 16px; }
     .meta { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 12px; }
-    .meta h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: #999; margin: 0 0 5px; }
-    .meta p { margin: 0; line-height: 1.5; font-size: 18px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-    th { text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: #888; border-bottom: 1px solid #ddd; padding: 6px 6px; }
-    td { padding: 8px 6px; border-bottom: 1px solid #f0f0f0; font-size: 19px; }
+    .meta h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #999; margin: 0 0 4px; }
+    .meta p { margin: 0; line-height: 1.5; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #888; border-bottom: 1px solid #ddd; padding: 6px; }
+    td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; font-size: 16px; }
     td.c, th.c { text-align: center; }
     td.r, th.r { text-align: right; }
-    .muted { color: #999; text-align: center; padding: 18px; }
-    .band { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+    .muted { color: #999; text-align: center; padding: 14px; }
+    .band { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 10px; }
     .bandleft { text-align: center; font-size: 13px; color: #666; }
-    .bandleft .lbl { margin-bottom: 8px; }
-    .bandleft img { width: 150px; height: 150px; }
-    .totals { width: 320px; font-size: 18px; }
+    .bandleft .lbl { margin-bottom: 6px; }
+    .totals { width: 300px; font-size: 16px; }
     .totals .line { display: flex; justify-content: space-between; padding: 4px 0; }
-    .totals .grand { border-top: 2px solid #111; margin-top: 6px; padding-top: 10px; font-size: 22px; font-weight: 800; }
-    .foot { margin-top: 14px; display: flex; justify-content: space-between; align-items: flex-end; }
-    .track { text-align: center; font-size: 10px; color: #666; }
-    .track .lbl { margin-bottom: 6px; }
-    .thanks { color: #888; font-size: 14px; }
+    .totals .grand { border-top: 2px solid #111; margin-top: 5px; padding-top: 8px; font-size: 19px; font-weight: 800; }
+    .thanks { color: #888; font-size: 13px; margin: 8px 0; }
+    .terms { margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd; }
+    .terms h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: #555; margin: 0 0 5px; }
+    .terms ol { margin: 0; padding-left: 18px; }
+    .terms li { font-size: 13px; line-height: 1.35; color: #333; margin-bottom: 2px; }
+    .agree { font-size: 14px; font-weight: 700; margin: 8px 0 10px; color: #111; }
+    .signrow { display: flex; align-items: flex-end; gap: 30px; margin-top: 6px; }
+    .signrow .cap { font-size: 13px; color: #666; margin-left: 8px; }
   </style></head>
   <body>
     <div class="head">
@@ -166,18 +163,16 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
 
     <div class="band">
       <div class="bandleft">${qr ? `<div class="lbl">Track your repair</div>${qr}` : ""}</div>
-    <div class="totals">
-      <div class="line"><span>Subtotal</span><span>${money(subtotal)}</span></div>
-      <div class="line"><span>GST (5%)</span><span>${money(gst)}</span></div>
-      <div class="line"><span>Total</span><span>${money(total)}</span></div>
-      ${deposit > 0 ? `<div class="line"><span>Deposit paid</span><span>-${money(deposit)}</span></div>` : ""}
-      <div class="line grand"><span>Balance due</span><span>${money(balance)}</span></div>
-    </div>
+      <div class="totals">
+        <div class="line"><span>Subtotal</span><span>${money(subtotal)}</span></div>
+        <div class="line"><span>GST (5%)</span><span>${money(gst)}</span></div>
+        <div class="line"><span>Total</span><span>${money(total)}</span></div>
+        ${deposit > 0 ? `<div class="line"><span>Deposit paid</span><span>-${money(deposit)}</span></div>` : ""}
+        <div class="line grand"><span>Balance due</span><span>${money(balance)}</span></div>
+      </div>
     </div>
 
-    <div class="foot">
-      <div class="thanks">Thank you for choosing ${esc(storeName)}.</div>
-    </div>
+    <div class="thanks">Thank you for choosing ${esc(storeName)}.</div>
 
     <div class="terms">
       <h3>Terms &amp; Conditions</h3>
@@ -193,15 +188,10 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
         <li>Canadian Cellular Communication Inc. will hold your device no longer than a period of 6 months or 185 days, after which your device will be recycled, and we will not be responsible for your data or your device.</li>
       </ol>
       <p class="agree">I understand and agree to all terms and conditions mentioned above.</p>
-      <div class="sign">
-        <div class="sigcol">
-          ${s.signatureData ? `<img class="sigimg" src="${s.signatureData}" alt="Signature" />` : `<div class="sigline"></div>`}
-          <div class="sigcap">Customer signature</div>
-        </div>
-        <div class="sigcol">
-          <div class="sigline">${s.signedAt ? esc(new Date(s.signedAt).toLocaleDateString()) : ""}</div>
-          <div class="sigcap">Date</div>
-        </div>
+
+      <div class="signrow">
+        <div>${signatureBlock}<span class="cap">Customer signature</span></div>
+        <div>${dateBlock}<span class="cap">Date</span></div>
       </div>
     </div>
   </body></html>`;
