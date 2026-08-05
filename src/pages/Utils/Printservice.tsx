@@ -38,17 +38,17 @@ export function printTag(s: Service) {
     .device { font-size: 10pt; font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .problem { font-size: 8pt; margin-top: 2px; line-height: 1.15; max-height: 0.42in; overflow: hidden; }
     .lbl { font-size: 6pt; color: #444; text-transform: uppercase; letter-spacing: .04em; }
-    .terms { margin-top: 26px; padding-top: 16px; border-top: 1px solid #ddd; page-break-inside: avoid; }
-    .terms h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #555; margin: 0 0 8px; }
+    .terms { margin-top: 16px; padding-top: 12px; border-top: 1px solid #ddd; page-break-inside: avoid; }
+    .terms h3 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #555; margin: 0 0 10px; }
     .terms ol { margin: 0; padding-left: 16px; }
-    .terms li { font-size: 8.5px; line-height: 1.45; color: #333; margin-bottom: 3px; }
-    .terms .agree { font-size: 9px; font-weight: 700; margin: 12px 0 18px; color: #111; }
+    .terms li { font-size: 14px; line-height: 1.4; color: #333; margin-bottom: 2px; }
+    .terms .agree { font-size: 14px; font-weight: 700; margin: 12px 0 18px; color: #111; }
     .sign { display: flex; gap: 40px; }
-    .sigcol:first-child { flex: 1; }
+    .sigcol:first-child { width: 260px; }
     .sigcol:last-child { width: 160px; }
     .sigline { border-bottom: 1px solid #333; height: 34px; display:flex; align-items:flex-end; padding-bottom:2px; font-size:11px; }
-    .sigimg { height: 44px; max-width: 100%; object-fit: contain; border-bottom: 1px solid #333; display:block; }
-    .sigcap { font-size: 9px; color: #666; margin-top: 4px; }
+    .sigimg { height: 42px; max-width: 170px; object-fit: contain; object-position: left bottom; border-bottom: 1px solid #333; display:block; }
+    .sigcap { font-size: 11px; color: #666; margin-top: 4px; }
   </style></head>
   <body>
     <div class="tag">
@@ -88,28 +88,28 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${esc(s.number)}</title>
   <style>
-    @page { size: A4; margin: 18mm; }
+    @page { size: A4; margin: 14mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 12px; }
-    .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 14px; margin-bottom: 20px; }
-    .store { font-size: 20px; font-weight: 800; letter-spacing: -.2px; }
-    .sub { color: #666; font-size: 11px; margin-top: 2px; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.4; }
+    .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
+    .store { font-size: 25px; font-weight: 800; letter-spacing: -.2px; }
+    .sub { color: #666; font-size: 13px; margin-top: 2px; }
     .title { text-align: right; }
-    .title h1 { margin: 0; font-size: 22px; letter-spacing: 2px; color: #111; }
+    .title h1 { margin: 0; font-size: 26px; letter-spacing: 2px; color: #111; }
     .title .no { color: #666; margin-top: 4px; }
-    .meta { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
-    .meta h3 { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #999; margin: 0 0 4px; }
+    .meta { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 16px; }
+    .meta h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #999; margin: 0 0 5px; }
     .meta p { margin: 0; line-height: 1.5; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
-    th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #888; border-bottom: 1px solid #ddd; padding: 8px 6px; }
-    td { padding: 9px 6px; border-bottom: 1px solid #f0f0f0; }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #888; border-bottom: 1px solid #ddd; padding: 8px 6px; }
+    td { padding: 10px 6px; border-bottom: 1px solid #f0f0f0; font-size: 16px; }
     td.c, th.c { text-align: center; }
     td.r, th.r { text-align: right; }
     .muted { color: #999; text-align: center; padding: 18px; }
-    .totals { width: 260px; margin-left: auto; }
+    .totals { width: 280px; margin-left: auto; font-size: 14px; }
     .totals .line { display: flex; justify-content: space-between; padding: 6px 0; }
-    .totals .grand { border-top: 2px solid #111; margin-top: 6px; padding-top: 10px; font-size: 15px; font-weight: 800; }
-    .foot { margin-top: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .totals .grand { border-top: 2px solid #111; margin-top: 6px; padding-top: 10px; font-size: 17px; font-weight: 800; }
+    .foot { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
     .track { text-align: center; font-size: 10px; color: #666; }
     .track .lbl { margin-bottom: 6px; }
     .thanks { color: #888; font-size: 11px; }
