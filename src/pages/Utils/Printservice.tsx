@@ -99,7 +99,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   <style>
     @page { size: A4 portrait; margin: 8mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 16px; line-height: 1.3; margin: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.3; margin: 0; }
 
     /* header: logo + contact on the left, INVOICE + QR on the right */
     .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;
@@ -126,7 +126,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
     table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
     th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #888;
          border-bottom: 1.5px solid #333; padding: 5px 6px; }
-    td { padding: 6px; border-bottom: 1px solid #eee; font-size: 13px; }
+    td { padding: 6px; border-bottom: 1px solid #eee; font-size: 16px; }
     td.c, th.c { text-align: center; }
     td.r, th.r { text-align: right; }
     .muted { color: #999; text-align: center; padding: 12px; }
@@ -138,10 +138,10 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
 
     /* terms */
     .terms { margin-top: 10px; padding-top: 8px; border-top: 1px solid #ddd; }
-    .terms h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: #666; margin: 0 0 4px; }
+    .terms h3 { font-size: 16px; text-transform: uppercase; letter-spacing: .07em; color: #666; margin: 0 0 6px; }
     .terms ol { margin: 0; padding-left: 15px; }
-    .terms li { font-size: 9px; line-height: 1.3; color: #333; margin-bottom: 1px; }
-    .agree { font-size: 10.5px; font-weight: 700; margin: 7px 0 4px; color: #111; }
+    .terms li { font-size: 16px; line-height: 1.3; color: #333; margin-bottom: 2px; }
+    .agree { font-size: 16px; font-weight: 700; margin: 8px 0 6px; color: #111; }
 
     /* signature */
     .signrow { display: flex; gap: 40px; align-items: flex-end; }
