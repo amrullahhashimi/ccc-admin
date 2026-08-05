@@ -72,7 +72,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   const balance = total - deposit;
 
   const qr = opts?.trackUrl
-    ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(opts.trackUrl)}" width="150" height="150" alt="Track" />`
+    ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(opts.trackUrl)}" width="68" height="68" alt="Track" />`
     : "";
 
   const rows = parts.length
@@ -87,10 +87,10 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   // Signature: inline-styled so nothing can override it. Small (85x21-ish box),
   // sitting on the same line as the date.
   const signatureBlock = s.signatureData
-    ? `<img src="${s.signatureData}" alt="Signature" style="height:42px;width:110px;object-fit:contain;object-position:left bottom;display:inline-block;vertical-align:bottom;border-bottom:1px solid #333;" />`
+    ? `<img src="${s.signatureData}" alt="Signature" style="height:50px;width:132px;object-fit:contain;object-position:left bottom;display:inline-block;vertical-align:bottom;border-bottom:1px solid #333;" />`
     : `<span style="display:inline-block;width:180px;border-bottom:1px solid #333;height:24px;vertical-align:bottom;"></span>`;
 
-  const dateBlock = `<span style="display:inline-block;width:120px;border-bottom:1px solid #333;height:24px;vertical-align:bottom;text-align:center;font-size:14px;">${s.signedAt ? esc(new Date(s.signedAt).toLocaleDateString()) : ""}</span>`;
+  const dateBlock = `<span style="display:inline-block;width:170px;border-bottom:1px solid #333;height:24px;vertical-align:bottom;text-align:center;font-size:13px;">${s.signedAt ? esc(new Date(s.signedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })) : ""}</span>`;
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${esc(s.number)}</title>
   <style>
