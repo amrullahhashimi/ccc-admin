@@ -121,6 +121,8 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
     .meta > div { flex: 1; background: #f7f7f8; border-radius: 4px; padding: 8px 10px; }
     .meta h3 { font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: #999; margin: 0 0 3px; }
     .meta p { margin: 0; font-size: 13px; line-height: 1.45; }
+    .meta .problem { margin-top: 5px; padding-top: 5px; border-top: 1px solid #e3e3e5; font-size: 13px; }
+    .meta .plbl { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em; color: #999; margin-bottom: 2px; }
 
     /* items */
     table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
@@ -178,6 +180,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
       <div>
         <h3>Device</h3>
         <p><strong>${esc(deviceOf(s))}</strong>${s.deviceImei ? `<br>IMEI: ${esc(s.deviceImei)}` : ""}</p>
+        ${s.issue ? `<p class="problem"><span class="plbl">Reported problem</span>${esc(s.issue)}</p>` : ""}
       </div>
       <div>
         <h3>Dates</h3>
