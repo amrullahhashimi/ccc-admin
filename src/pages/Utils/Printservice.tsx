@@ -3,6 +3,7 @@ import type { Service } from "../../lib/api";
 /* ─────────────── store details — edit these ─────────────── */
 const STORE_NAME = "Canadian Cellular Communication";
 const WEBSITE = "www.caceco.ca";
+const SERVICES_SITE = "www.services.caceco.ca";
 // Per-location contact. Keys are matched (lowercase) against the order's location name.
 const LOCATIONS: Record<string, { address: string; phone: string }> = {
   glendale:  { address: "3931 17 Ave SW, Calgary, AB T3E 7E7",   phone: "(403) 436-6565" },
@@ -159,7 +160,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
       <div class="brand">
         <img src="${origin}${LOGO_PATH}" alt="${esc(storeName)}" />
         <div class="contact">
-          ${loc ? `<strong>${esc(loc.address)}</strong><br>${esc(loc.phone)} &nbsp;·&nbsp; ${esc(WEBSITE)}` : esc(WEBSITE)}
+          ${loc ? `<strong>${esc(loc.address)}</strong><br>${esc(loc.phone)} &nbsp;·&nbsp; ${esc(WEBSITE)} &nbsp;·&nbsp; ${esc(SERVICES_SITE)}` : `${esc(WEBSITE)} &nbsp;·&nbsp; ${esc(SERVICES_SITE)}`}
         </div>
       </div>
       <div class="invblock">
@@ -228,7 +229,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
       </div>
     </div>
 
-    <div class="foot">Thank you for choosing ${esc(storeName)} &nbsp;·&nbsp; ${esc(WEBSITE)}</div>
+    <div class="foot">Thank you for choosing ${esc(storeName)} &nbsp;·&nbsp; ${esc(WEBSITE)} &nbsp;·&nbsp; ${esc(SERVICES_SITE)}</div>
   </body></html>`;
   printHtml(html);
 }
