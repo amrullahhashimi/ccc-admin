@@ -32,6 +32,10 @@ function shapeService(body) {
   if (body.deposit !== undefined && body.deposit !== "") {
     d.depositCents = Math.round(parseFloat(body.deposit) * 100) || 0;
   }
+  if (body.signatureData !== undefined) {
+    d.signatureData = body.signatureData || null;
+    d.signedAt = body.signatureData ? new Date() : null;
+  }
   if (body.status === "COLLECTED") d.completedAt = new Date();
   return d;
 }

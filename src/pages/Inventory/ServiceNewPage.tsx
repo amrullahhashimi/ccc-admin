@@ -7,6 +7,7 @@ import {
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { printTag, printInvoice } from "../Utils/Printservice";
+import SignaturePad from "./SignaturePad";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -395,6 +396,7 @@ export default function ServiceNewPage() {
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [copied, setCopied] = useState(false);
+  const [signing, setSigning] = useState(false);
   const dirtyRef = useRef(false);
   const setF = (k: keyof typeof form, v: string | boolean) => { dirtyRef.current = true; setForm((f) => ({ ...f, [k]: v })); };
 
@@ -511,6 +513,13 @@ export default function ServiceNewPage() {
   }, [form.device, form.deviceImei, form.passcode, form.warranty, form.dateInDate, form.dateInTime, form.dueDate, form.dueTime, form.issue, form.receiptNote, form.internalNote, form.deposit]);
   const setStatus = async (status: string) => { if (!id) return; setF("status", status); try { await serviceApi.update(id, { status }); load(); } catch (err) { alert(err instanceof Error ? err.message : "Could not update status."); } };
   const remove = async () => { if (!svc || !id || !confirm(`Delete service #${svc.number}?`)) return; try { await serviceApi.remove(id); navigate("/service"); } catch (err) { alert(err instanceof Error ? err.message : "Could not delete."); } };
+
+  const saveSignature = async (dataUrl: string) => {
+    if (!id) return;
+    setSigning(false);
+    try { await serviceApi.update(id, { signatureData: dataUrl }); load(); }
+    catch (err) { alert(err instanceof Error ? err.message : "Could not save signature."); }
+  };
 
   const copyTrack = async () => {
     if (!svc?.trackToken) return;
@@ -665,6 +674,17 @@ export default function ServiceNewPage() {
               })()}
             </div>
 
+            <button type="button" onClick={() => setSigning(true)} className={`flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium ${svc.signatureData ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/15" : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"}`}>
+              {svc.signatureData ? (<><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>Signed</>) : "Get signature"}
+            </button>
+
+            {svc.signatureData && (
+              <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-white/[0.02]">
+                <p className="mb-2 text-xs text-gray-500">Signed{svc.signedAt ? ` \u00b7 ${new Date(svc.signedAt).toLocaleDateString()}` : ""}</p>
+                <img src={svc.signatureData} alt="Signature" className="h-16 w-full object-contain" />
+              </div>
+            )}
+
             {svc.trackToken && (
               <button type="button" onClick={copyTrack} className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">
                 {copied ? "Link copied!" : "Copy tracking link"}
@@ -675,6 +695,7 @@ export default function ServiceNewPage() {
           </div>
         )}
       </div>
+      {signing && <SignaturePad onSave={saveSignature} onClose={() => setSigning(false)} />}
     </form>
   );
 }

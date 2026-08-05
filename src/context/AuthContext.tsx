@@ -47,8 +47,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh().finally(() => setLoading(false));
   }, [refresh]);
 
-  // The lock is on the clock, so nothing the user does will trigger it —
-  // poll every 30s, and whenever they return to the tab, so it appears on time.
+  // Idle lock: real user activity pushes the server's 2-hour lock forward
+  // (throttled to once a minute). No activity for 2h → server locks → the poll
+  // below picks it up and shows the PIN screen.
+  useEffect(() => {
+    if (!user || locked) return;
+    let last = 0;
+    const onActivity = () => {
+      const now = Date.now();
+      if (now - last < 60000) return; // ping at most once a minute
+      last = now;
+      auth.ping().catch(() => {});
+    };
+    const events = ["mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+    return () => events.forEach((e) => window.removeEventListener(e, onActivity));
+  }, [user, locked]);
+
+  // Poll so the lock appears on time — every 30s and whenever the tab regains focus.
   useEffect(() => {
     if (!user) return;
     const tick = () => refresh();
@@ -95,7 +111,7 @@ export function useAuth() {
   return ctx;
 }
 
-/** Wrap any route that needs a signed-in user. Shows the PIN lock when the hour lapses. */
+/** Wrap any route that needs a signed-in user. Shows the PIN lock when the shift lapses. */
 export function RequireAuth({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user, locked, loading } = useAuth();
   const location = useLocation();
@@ -130,7 +146,7 @@ export function RequireAuth({ children, roles }: { children: ReactNode; roles?: 
 /* ------------------------------ lock screen ------------------------------ */
 
 function LockScreen() {
-  const {unlock, signOut } = useAuth();
+  const { unlock, signOut } = useAuth();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -163,7 +179,7 @@ function LockScreen() {
         </div>
         <h1 className="text-lg font-semibold text-gray-800 dark:text-white/90">Screen locked</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {"Enter your PIN to unlock and continue."}
+          Enter your PIN to unlock and continue.
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">

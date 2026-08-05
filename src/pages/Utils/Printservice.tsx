@@ -38,6 +38,17 @@ export function printTag(s: Service) {
     .device { font-size: 10pt; font-weight: 600; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .problem { font-size: 8pt; margin-top: 2px; line-height: 1.15; max-height: 0.42in; overflow: hidden; }
     .lbl { font-size: 6pt; color: #444; text-transform: uppercase; letter-spacing: .04em; }
+    .terms { margin-top: 26px; padding-top: 16px; border-top: 1px solid #ddd; page-break-inside: avoid; }
+    .terms h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #555; margin: 0 0 8px; }
+    .terms ol { margin: 0; padding-left: 16px; }
+    .terms li { font-size: 8.5px; line-height: 1.45; color: #333; margin-bottom: 3px; }
+    .terms .agree { font-size: 9px; font-weight: 700; margin: 12px 0 18px; color: #111; }
+    .sign { display: flex; gap: 40px; }
+    .sigcol:first-child { flex: 1; }
+    .sigcol:last-child { width: 160px; }
+    .sigline { border-bottom: 1px solid #333; height: 34px; display:flex; align-items:flex-end; padding-bottom:2px; font-size:11px; }
+    .sigimg { height: 44px; max-width: 100%; object-fit: contain; border-bottom: 1px solid #333; display:block; }
+    .sigcap { font-size: 9px; color: #666; margin-top: 4px; }
   </style></head>
   <body>
     <div class="tag">
@@ -146,6 +157,32 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
     <div class="foot">
       <div class="thanks">Thank you for choosing ${esc(storeName)}.</div>
       ${qr ? `<div class="track"><div class="lbl">Track your repair</div>${qr}</div>` : ""}
+    </div>
+
+    <div class="terms">
+      <h3>Terms &amp; Conditions</h3>
+      <ol>
+        <li>For iPhones 12 and up, iPads, iMacs, MS Surfaces, Google Pixels, Nexus, Huawei, Samsung or any other glued-on devices, we are not responsible and liable for damaged screens and other board issues during the repair.</li>
+        <li>Motherboard work is not guaranteed and we are not liable for other damages on the board during the repair.</li>
+        <li>The owner has backed up all the important data before handing the device over for inspection or repair.</li>
+        <li>Canadian Cellular Communication Inc. management, staff or its agents are not liable for the device&rsquo;s termination (permanently disabled) due to any pre-existing conditions (e.g. water damage, software tampering, or impact damage).</li>
+        <li>The owner must be ready to reply and confirm the repair cost via email, voicemail, call or text.</li>
+        <li>Repaired or broken devices lose their water-resistant status and are not meant to be submerged even if sealed.</li>
+        <li>All repaired devices must be paid for in full within thirty (30) days; otherwise the device will be kept in lieu of payment. There is no exception to this unless prior written consent was given by one of Canadian Cellular Communication employees.</li>
+        <li>Canadian Cellular Communication Inc. will provide a thirty (30) day warranty on specific repair work done from the pickup date.</li>
+        <li>Canadian Cellular Communication Inc. will hold your device no longer than a period of 6 months or 185 days, after which your device will be recycled, and we will not be responsible for your data or your device.</li>
+      </ol>
+      <p class="agree">I understand and agree to all terms and conditions mentioned above.</p>
+      <div class="sign">
+        <div class="sigcol">
+          ${s.signatureData ? `<img class="sigimg" src="${s.signatureData}" alt="Signature" />` : `<div class="sigline"></div>`}
+          <div class="sigcap">Customer signature</div>
+        </div>
+        <div class="sigcol">
+          <div class="sigline">${s.signedAt ? esc(new Date(s.signedAt).toLocaleDateString()) : ""}</div>
+          <div class="sigcap">Date</div>
+        </div>
+      </div>
     </div>
   </body></html>`;
   printHtml(html);

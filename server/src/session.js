@@ -1,10 +1,10 @@
-// The shift ceiling and the hourly PIN lock, plus the state machine that reads them.
+// The shift ceiling and the inactivity PIN lock, plus the state machine that reads them.
 const SHIFT_MS = 6 * 60 * 60 * 1000; // a full password login covers a 6-hour shift
-const LOCK_MS = 60 * 60 * 1000; // the screen locks for a PIN every hour
+const LOCK_MS = 2 * 60 * 60 * 1000; // the screen locks for a PIN after 2 hours of inactivity
 
 /**
- * "active"  — within the current hour, full access
- * "locked"  — a PIN is needed: either to finish logging in, or the hour lapsed
+ * "active"  — within the current unlock window, full access
+ * "locked"  — a PIN is needed: either to finish logging in, or inactivity lapsed
  * "expired" — the 6-hour shift is over (or no PIN on file); needs a password
  *
  * awaitingPin is the second step of login — password accepted, PIN not yet given,

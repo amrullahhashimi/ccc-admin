@@ -261,6 +261,9 @@ model Ticket {
   sale  Sale?
 
   trackToken String? @unique
+
+  signatureData String?   @db.Text
+  signedAt      DateTime?
 }
 
 model TicketPart {

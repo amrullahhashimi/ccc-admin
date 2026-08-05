@@ -191,6 +191,7 @@ export const auth = {
   me: () => request<{ user: User; locked: boolean; hasPin: boolean }>("/api/auth/me"),
   unlock: (pin: string) =>
     request<{ user: User }>("/api/auth/unlock", { method: "POST", ...body({ pin }) }),
+  ping: () => request<{ ok: true }>("/api/auth/ping", { method: "POST" }),   // ← ADD THIS
   changePassword: (current: string, next: string) =>
     request<{ ok: true }>("/api/auth/password", { method: "POST", ...body({ current, next }) }),
   setPin: (pin: string) => request<{ ok: true }>("/api/auth/pin", { method: "POST", ...body({ pin }) }),
@@ -333,6 +334,8 @@ export interface Service {
   externalNote?: string | null;
   internalNote?: string | null;
   trackToken?: string | null;
+  signatureData?: string | null;
+  signedAt?: string | null;
 }
 
 /* ----------------------------- dashboard ----------------------------- */

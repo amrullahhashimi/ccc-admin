@@ -52,11 +52,21 @@ module.exports = (prisma) => {
     return res.status(401).json({ error: "Please sign in." });
   });
 
-  /** Handles both the second step of login and the hourly unlock. */
+  // Activity ping — real user activity pushes the inactivity lock forward,
+  // capped at the shift ceiling. Does nothing if the shift has ended or a PIN is pending.
+  router.post("/ping", (req, res) => {
+    const s = req.session;
+    if (s && s.user && !s.awaitingPin && s.shiftEndsAt && Date.now() < s.shiftEndsAt) {
+      s.lockAt = Math.min(Date.now() + LOCK_MS, s.shiftEndsAt);
+    }
+    res.json({ ok: true });
+  });
+
+  /** Handles both the second step of login and the inactivity unlock. */
   router.post("/unlock", async (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: "Please sign in." });
 
-    // Hourly unlocks need the shift still running; the login PIN step doesn't (no shift yet).
+    // Unlocks need the shift still running; the login PIN step doesn't (no shift yet).
     if (!req.session.awaitingPin) {
       if (!req.session.shiftEndsAt || Date.now() >= req.session.shiftEndsAt) {
         return res.status(401).json({
