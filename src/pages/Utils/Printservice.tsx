@@ -39,15 +39,15 @@ export function printTag(s: Service) {
     .problem { font-size: 8pt; margin-top: 2px; line-height: 1.15; max-height: 0.42in; overflow: hidden; }
     .lbl { font-size: 6pt; color: #444; text-transform: uppercase; letter-spacing: .04em; }
     .terms { margin-top: 12px; padding-top: 10px; border-top: 1px solid #ddd; page-break-inside: avoid; }
-    .terms h3 { font-size: 16px; text-transform: uppercase; letter-spacing: .06em; color: #555; margin: 0 0 6px; }
+    .terms h3 { font-size: 22px; text-transform: uppercase; letter-spacing: .06em; color: #555; margin: 0 0 8px; }
     .terms ol { margin: 0; padding-left: 16px; }
-    .terms li { font-size: 15px; line-height: 1.4; color: #333; margin-bottom: 2px; }
-    .terms .agree { font-size: 16px; font-weight: 700; margin: 10px 0 14px; color: #111; }
-    .sign { display: flex; gap: 40px; }
-    .sigcol:first-child { width: 260px; }
-    .sigcol:last-child { width: 160px; }
+    .terms li { font-size: 22px; line-height: 1.3; color: #333; margin-bottom: 3px; }
+    .terms .agree { font-size: 22px; font-weight: 700; margin: 12px 0 16px; color: #111; }
+    .sign { display: flex; gap: 40px; align-items: flex-end; flex-wrap: nowrap; }
+    .sigcol:first-child { width: 200px; }
+    .sigcol:last-child { width: 140px; }
     .sigline { border-bottom: 1px solid #333; height: 34px; display:flex; align-items:flex-end; padding-bottom:2px; font-size:11px; }
-    .sigimg { height: 42px; max-width: 170px; object-fit: contain; object-position: left bottom; border-bottom: 1px solid #333; display:block; }
+    .sigimg { height: 21px; max-width: 85px; object-fit: contain; object-position: left bottom; border-bottom: 1px solid #333; display:block; }
     .sigcap { font-size: 14px; color: #666; margin-top: 4px; }
   </style></head>
   <body>
@@ -100,8 +100,9 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${esc(s.number)}</title>
   <style>
     @page { size: A4 portrait; margin: 7mm; }
+    @media print { html, body { -webkit-print-color-adjust: exact; } }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.4; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 16px; line-height: 1.4; }
     .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 12px; }
     .store { font-size: 25px; font-weight: 800; letter-spacing: -.2px; }
     .sub { color: #666; font-size: 15px; margin-top: 2px; }
@@ -118,7 +119,11 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
     td.c, th.c { text-align: center; }
     td.r, th.r { text-align: right; }
     .muted { color: #999; text-align: center; padding: 18px; }
-    .totals { width: 320px; margin-left: auto; font-size: 18px; }
+    .band { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+    .bandleft { text-align: center; font-size: 13px; color: #666; }
+    .bandleft .lbl { margin-bottom: 8px; }
+    .bandleft img { width: 150px; height: 150px; }
+    .totals { width: 320px; font-size: 18px; }
     .totals .line { display: flex; justify-content: space-between; padding: 4px 0; }
     .totals .grand { border-top: 2px solid #111; margin-top: 6px; padding-top: 10px; font-size: 22px; font-weight: 800; }
     .foot { margin-top: 14px; display: flex; justify-content: space-between; align-items: flex-end; }
@@ -159,6 +164,8 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
       <tbody>${rows}</tbody>
     </table>
 
+    <div class="band">
+      <div class="bandleft">${qr ? `<div class="lbl">Track your repair</div>${qr}` : ""}</div>
     <div class="totals">
       <div class="line"><span>Subtotal</span><span>${money(subtotal)}</span></div>
       <div class="line"><span>GST (5%)</span><span>${money(gst)}</span></div>
@@ -166,10 +173,10 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
       ${deposit > 0 ? `<div class="line"><span>Deposit paid</span><span>-${money(deposit)}</span></div>` : ""}
       <div class="line grand"><span>Balance due</span><span>${money(balance)}</span></div>
     </div>
+    </div>
 
     <div class="foot">
       <div class="thanks">Thank you for choosing ${esc(storeName)}.</div>
-      ${qr ? `<div class="track"><div class="lbl">Track your repair</div>${qr}</div>` : ""}
     </div>
 
     <div class="terms">
