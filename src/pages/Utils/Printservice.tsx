@@ -90,7 +90,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   <style>
     @page { size: A4; margin: 14mm; }
     * { box-sizing: border-box; }
-    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.4; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 16px; line-height: 1.4; }
     .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
     .store { font-size: 25px; font-weight: 800; letter-spacing: -.2px; }
     .sub { color: #666; font-size: 13px; margin-top: 2px; }
