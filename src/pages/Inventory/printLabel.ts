@@ -124,19 +124,16 @@ function deviceLine(service: Service): string {
 }
 
 /**
- * Total price of the service, GST included.
- * Matches the backend track route: subtotal = parts + labour, GST = round(5%),
- * total = subtotal + GST.
+ * Price of the service before GST: parts + labour (the subtotal).
+ * GST is added on the invoice / tracking page, not here.
  */
-function serviceTotalCents(service: Service): number {
+function serviceSubtotalCents(service: Service): number {
   const partsCents = (service.parts ?? []).reduce(
     (sum, p) => sum + (p.priceCents ?? 0) * (p.quantity ?? 1),
     0,
   );
   const labourCents = service.labourCents ?? 0;
-  const subtotal = partsCents + labourCents;
-  const gst = Math.round(subtotal * 0.05);
-  return subtotal + gst;
+  return partsCents + labourCents;
 }
 
 /**
@@ -154,7 +151,7 @@ export function printServiceTag(service: Service) {
   const numberStr = String(service.number);
   const passcode = service.passcode ?? "";
   const problem = service.issue ?? "";
-  const total = "$" + (serviceTotalCents(service) / 100).toFixed(2);
+  const price = "$" + (serviceSubtotalCents(service) / 100).toFixed(2);
 
   const win = window.open("", "_blank", "width=520,height=240");
   if (!win) {
@@ -211,8 +208,8 @@ export function printServiceTag(service: Service) {
       <div class="num">#${escapeHtml(numberStr)}</div>
       <div class="bcwrap"><svg id="bc"></svg></div>
       <div>
-        <div class="tl">TOTAL</div>
-        <div class="tv">${escapeHtml(total)}</div>
+        <div class="tl">PRICE</div>
+        <div class="tv">${escapeHtml(price)}</div>
       </div>
     </div>
   </div>
