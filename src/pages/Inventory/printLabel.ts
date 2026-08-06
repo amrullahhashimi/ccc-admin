@@ -173,7 +173,7 @@ export function printServiceTag(service: Service) {
     html, body { margin: 0; padding: 0; }
     .label {
         width: 3.5in; height: 1.125in;
-        box-sizing: border-box; padding: 0.05in 3px;
+        box-sizing: border-box; padding: 0.05in 6px 0.05in 3px;
         display: flex; gap: 6px;
         font-family: Arial, Helvetica, sans-serif;
         overflow: hidden;
