@@ -93,6 +93,7 @@ export interface Product {
   avgCostCents: number;
   serialsOnFile: number; // serials recorded, tracked separately
   unitCount: number;
+  tracksSerials: boolean;
 }
 
 export interface StockEntry {

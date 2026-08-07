@@ -141,6 +141,8 @@ model Product {
 
   @@index([name])
   @@index([upc])
+
+  tracksSerials Boolean @default(true)
 }
 
 /// One physical device — its own serial, condition, and shelf.

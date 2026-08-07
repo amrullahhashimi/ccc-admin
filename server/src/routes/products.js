@@ -24,6 +24,7 @@ function shapeProduct(body) {
 
   if (body.taxable !== undefined) d.taxable = !!body.taxable;
   if (body.active !== undefined) d.active = !!body.active;
+  if (body.tracksSerials !== undefined) d.tracksSerials = !!body.tracksSerials;
 
   ["reorderAt"].forEach((k) => {
     if (body[k] !== undefined && body[k] !== "") {

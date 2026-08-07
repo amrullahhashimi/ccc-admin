@@ -13,6 +13,10 @@ export default function NewItemPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Whether this product is tracked by serial number. Off = sold by quantity
+  // (accessories, cases, etc.) and the Serial #s tab stays hidden for it.
+  const [tracksSerials, setTracksSerials] = useState(true);
+
   const [form, setForm] = useState({
     name: "",
     sku: "",
@@ -40,8 +44,8 @@ export default function NewItemPage() {
 
     setSaving(true);
     try {
-      const created = await productsApi.create(form);
-      // Straight to the item so serials can go on next.
+      const created = await productsApi.create({ ...form, tracksSerials });
+      // Straight to the item so serials / stock can go on next.
       navigate(`/inventory/items/${created.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
@@ -139,15 +143,22 @@ export default function NewItemPage() {
             <label className={labelClass}>Online price</label>
             <input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} placeholder="0.00" />
           </div>
-          <div>
-            <label className={labelClass}>Sale price</label>
-            <input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} placeholder="0.00" />
+          <div className="sm:col-span-2 flex flex-wrap items-end gap-6">
+            <div className="min-w-[10rem] flex-1">
+              <label className={labelClass}>Sale price</label>
+              <input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} placeholder="0.00" />
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 pb-3 text-sm text-gray-700 dark:text-gray-400">
+              <input
+                type="checkbox"
+                checked={tracksSerials}
+                onChange={(e) => setTracksSerials(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 accent-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-gray-700"
+              />
+              Items Serialized
+            </label>
           </div>
         </div>
-
-        <p className="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-500 dark:bg-white/[0.02]">
-          Save this first, then add serial numbers on the item's Serial #s tab.
-        </p>
       </div>
 
       {error && (
@@ -167,7 +178,7 @@ export default function NewItemPage() {
           disabled={saving}
           className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save and add serials"}
+          {saving ? "Saving…" : tracksSerials ? "Save and add serials" : "Save and add stock"}
         </button>
       </div>
     </form>

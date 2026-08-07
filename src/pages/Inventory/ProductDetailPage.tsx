@@ -504,6 +504,7 @@ function DetailsTab({ product, meta, onSaved }: { product: Product; meta: Meta |
     onlinePrice: (product.onlinePriceCents / 100).toFixed(2),
     salePrice: (product.salePriceCents / 100).toFixed(2),
     taxable: product.taxable,
+    tracksSerials: product.tracksSerials,
     reorderAt: String(product.reorderAt),
     notes: product.notes ?? "",
   });
@@ -570,11 +571,28 @@ function DetailsTab({ product, meta, onSaved }: { product: Product; meta: Meta |
           <div><label className={labelClass}>Reorder at</label><input type="number" className={inputClass} value={form.reorderAt} onChange={(e) => set("reorderAt", e.target.value)} /></div>
           <div><label className={labelClass}>Cost price</label><input type="number" step="0.01" className={inputClass} value={form.cost} onChange={(e) => set("cost", e.target.value)} /></div>
           <div><label className={labelClass}>Online price</label><input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} /></div>
-          <div><label className={labelClass}>Sale price</label><input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} /></div>
-          <div className="flex items-end pb-3">
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
-              <input type="checkbox" checked={form.taxable} onChange={(e) => set("taxable", e.target.checked)} />
+          <div className="sm:col-span-2 flex flex-wrap items-end gap-6">
+            <div className="min-w-[10rem] flex-1">
+              <label className={labelClass}>Sale price</label>
+              <input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} />
+            </div>
+            <label className="flex items-center gap-2 pb-3 text-sm text-gray-700 dark:text-gray-400">
+              <input
+                type="checkbox"
+                checked={form.taxable}
+                onChange={(e) => set("taxable", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 accent-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-gray-700"
+              />
               Taxable
+            </label>
+            <label className="flex items-center gap-2 pb-3 text-sm text-gray-700 dark:text-gray-400">
+              <input
+                type="checkbox"
+                checked={form.tracksSerials}
+                onChange={(e) => set("tracksSerials", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 accent-brand-500 focus:ring-2 focus:ring-brand-500/30 dark:border-gray-700"
+              />
+              Items Serialized
             </label>
           </div>
           <div className="sm:col-span-2">
@@ -596,6 +614,8 @@ function DetailsTab({ product, meta, onSaved }: { product: Product; meta: Meta |
 
 /* -------------------------------- the page -------------------------------- */
 
+type TabKey = "details" | "inventory" | "serials";
+
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -603,7 +623,7 @@ export default function ProductDetailPage() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
-  const [tab, setTab] = useState<"details" | "inventory" | "serials">("details");
+  const [tab, setTab] = useState<TabKey>("details");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -648,6 +668,16 @@ export default function ProductDetailPage() {
     { name: "Online", cents: product.onlinePriceCents },
   ];
 
+  // Only serialised products get the Serial #s tab.
+  const tabs: [TabKey, string][] = [
+    ["details", "Details"],
+    ["inventory", `Inventory (${onHand})`],
+  ];
+  if (product.tracksSerials) tabs.push(["serials", `Serial #s (${product.serialsOnFile})`]);
+
+  // A non-serial product should never sit on the serials tab.
+  const activeTab: TabKey = tab === "serials" && !product.tracksSerials ? "details" : tab;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -668,19 +698,18 @@ export default function ProductDetailPage() {
       <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
         <div className="space-y-5">
           <div className="flex gap-1 border-b border-gray-200 dark:border-gray-800">
-            {([["details", "Details"], ["inventory", `Inventory (${onHand})`], ["serials", `Serial #s (${product.serialsOnFile})`]] as const).map(([key, label]) => (
-              <button key={key} onClick={() => setTab(key)} className={`border-b-2 px-4 py-2.5 text-sm font-medium transition ${tab === key ? "border-brand-500 text-brand-500" : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white/90"}`}>
+            {tabs.map(([key, label]) => (
+              <button key={key} onClick={() => setTab(key)} className={`border-b-2 px-4 py-2.5 text-sm font-medium transition ${activeTab === key ? "border-brand-500 text-brand-500" : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white/90"}`}>
                 {label}
               </button>
             ))}
           </div>
-
-          {tab === "details" ? (
-            <DetailsTab product={product} meta={meta} onSaved={load} />
-          ) : tab === "inventory" ? (
+          {activeTab === "serials" && product.tracksSerials ? (
+            <SerialsTab product={product} meta={meta} onChanged={load} />
+          ) : activeTab === "inventory" ? (
             <InventoryTab product={product} meta={meta} onChanged={load} />
           ) : (
-            <SerialsTab product={product} meta={meta} onChanged={load} />
+            <DetailsTab product={product} meta={meta} onSaved={load} />
           )}
         </div>
 
@@ -724,7 +753,7 @@ export default function ProductDetailPage() {
             <dl className="divide-y divide-gray-100 dark:divide-gray-800">
               {[
                 ["On hand", String(onHand)],
-                ["Serials on file", String(product.serialsOnFile)],
+                ...(product.tracksSerials ? [["Serials on file", String(product.serialsOnFile)]] as [string, string][] : []),
                 ["Reserved", String(reserved)],
                 ["Avg. cost", money(avgCost)],
                 ["Total value", money(totalValue)],
@@ -737,7 +766,7 @@ export default function ProductDetailPage() {
                 </div>
               ))}
             </dl>
-            {product.serialsOnFile !== onHand && (
+            {product.tracksSerials && product.serialsOnFile !== onHand && (
               <p className="border-t border-gray-100 px-5 py-3 text-xs text-warning-600 dark:border-gray-800 dark:text-warning-500">
                 On hand and serials on file don't match. That's allowed — quantity comes from the Inventory tab, serials are recorded separately.
               </p>
