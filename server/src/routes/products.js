@@ -304,6 +304,58 @@ module.exports = (prisma, requireRole) => {
     }
   });
 
+  /**
+   * Sell one serial by hand, without building a full sale. Marks the unit SOLD
+   * and takes one off the quantity on hand so the two stay in step.
+   */
+  router.post("/units/:unitId/sell", async (req, res) => {
+    try {
+      const unit = await prisma.productUnit.findUnique({
+        where: { id: req.params.unitId },
+        include: { product: { select: { costCents: true } } },
+      });
+      if (!unit) return res.status(404).json({ error: "Serial not found." });
+      if (unit.status !== "IN_STOCK") {
+        return res.status(409).json({ error: `Serial ${unit.serial} is not in stock.` });
+      }
+
+      await prisma.$transaction([
+        prisma.productUnit.update({ where: { id: unit.id }, data: { status: "SOLD" } }),
+        prisma.stockEntry.create({
+          data: {
+            productId: unit.productId,
+            quantity: -1,
+            costCents: unit.product.costCents,
+            note: `Sold serial ${unit.serial}`,
+          },
+        }),
+      ]);
+
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * Put a sold serial back on the shelf. Status only — the quantity on hand is
+   * left alone so it can be corrected by hand from the Inventory tab.
+   */
+  router.post("/units/:unitId/return", async (req, res) => {
+    try {
+      const unit = await prisma.productUnit.findUnique({ where: { id: req.params.unitId } });
+      if (!unit) return res.status(404).json({ error: "Serial not found." });
+      if (unit.status === "IN_STOCK") {
+        return res.status(409).json({ error: `Serial ${unit.serial} is already in stock.` });
+      }
+
+      await prisma.productUnit.update({ where: { id: unit.id }, data: { status: "IN_STOCK" } });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   /** Only unsold units can be deleted — sold ones are history. */
   router.delete("/units/:unitId", requireRole("OWNER", "MANAGER"), async (req, res) => {
     try {

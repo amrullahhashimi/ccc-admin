@@ -305,6 +305,10 @@ export const products = {
     request<ProductUnit>(`/api/products/units/${unitId}`, { method: "PATCH", ...body(data) }),
   removeUnit: (unitId: string) =>
     request<{ ok: true }>(`/api/products/units/${unitId}`, { method: "DELETE" }),
+  sellUnit: (unitId: string) =>
+    request<{ ok: true }>(`/api/products/units/${unitId}/sell`, { method: "POST" }),
+  returnUnit: (unitId: string) =>
+    request<{ ok: true }>(`/api/products/units/${unitId}/return`, { method: "POST" }),
   addStock: (productId: string, data: { quantity: number; cost?: string; vendorId?: string | null; note?: string }) =>
     request<StockEntry>(`/api/products/${productId}/stock`, { method: "POST", ...body(data) }),
   removeStockEntry: (entryId: string) =>

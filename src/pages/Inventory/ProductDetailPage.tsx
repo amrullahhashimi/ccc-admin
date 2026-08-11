@@ -220,6 +220,8 @@ function SerialsTab({
   const vendorOptions: VendorOption[] = [...(meta?.vendors ?? []), ...extraVendors];
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sellingId, setSellingId] = useState<string | null>(null);
+  const [returningId, setReturningId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...blankSerial });
 
   useEffect(() => setUnits(product.units ?? []), [product.units]);
@@ -305,6 +307,31 @@ function SerialsTab({
     }
   };
 
+  const sell = async (unit: ProductUnit) => {
+    if (!confirm(`Mark serial ${unit.serial} as sold? Quantity on hand drops by one.`)) return;
+    setSellingId(unit.id);
+    try {
+      await productsApi.sellUnit(unit.id);
+      if (editingId === unit.id) resetForm();
+      onChanged();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not mark as sold.");
+    }
+    setSellingId(null);
+  };
+
+  const returnToStock = async (unit: ProductUnit) => {
+    if (!confirm(`Return serial ${unit.serial} to stock? Quantity on hand is left as is — adjust it from the Inventory tab.`)) return;
+    setReturningId(unit.id);
+    try {
+      await productsApi.returnUnit(unit.id);
+      onChanged();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Could not return to stock.");
+    }
+    setReturningId(null);
+  };
+
   const inStock = units.filter((u) => u.status === "IN_STOCK");
   const gone = units.filter((u) => u.status !== "IN_STOCK");
 
@@ -345,10 +372,28 @@ function SerialsTab({
                 <div className="flex items-center justify-end gap-3">
                   {u.status === "IN_STOCK" && (
                     <button
+                      onClick={(e) => { e.stopPropagation(); sell(u); }}
+                      disabled={sellingId === u.id}
+                      className="rounded-lg bg-success-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-success-600 disabled:opacity-60"
+                    >
+                      {sellingId === u.id ? "Selling…" : "Sell"}
+                    </button>
+                  )}
+                  {u.status === "IN_STOCK" && (
+                    <button
                       onClick={(e) => { e.stopPropagation(); printUnitLabel(product, u); }}
                       className="text-xs font-medium text-brand-500 hover:text-brand-600"
                     >
                       Print
+                    </button>
+                  )}
+                  {u.status !== "IN_STOCK" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); returnToStock(u); }}
+                      disabled={returningId === u.id}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                    >
+                      {returningId === u.id ? "Returning…" : "Return"}
                     </button>
                   )}
                   {can("OWNER", "MANAGER") && u.status !== "SOLD" && (
@@ -478,7 +523,7 @@ function SerialsTab({
         <div className={panelClass}>
           <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
             <h2 className="font-semibold text-gray-800 dark:text-white/90">
-              Sold and returned <span className="ml-1 text-sm font-normal text-gray-500">{gone.length}</span>
+              Sold <span className="ml-1 text-sm font-normal text-gray-500">{gone.length}</span>
             </h2>
           </div>
           <UnitTable list={gone} muted />
