@@ -63,7 +63,13 @@ module.exports = () => {
 
   router.get("/status", (req, res) => {
     const t = store.read();
-    res.json({ connected: !!t?.accessToken, merchantId: t?.merchantId ?? null, accessExp: t?.accessExp ?? null });
+    res.json({
+      connected: !!t?.accessToken,
+      merchantId: t?.merchantId ?? null,
+      accessExp: t?.accessExp ?? null,
+      // One-time webhook handshake code, shown here so it doesn't have to be dug out of server logs.
+      webhookVerificationCode: t?.webhookVerificationCode ?? null,
+    });
   });
 
   return router;

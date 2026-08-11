@@ -114,13 +114,6 @@ export default function SalesPage() {
           </div>
         )}
       </div>
-
-      <a
-        href="/oauth/connect"
-        className="inline-block rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
-      >
-        Connect Clover
-      </a>
     </div>
   );
 }
