@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
 const TERMS = [
-  "For iPhones 12 and up, iPads, iMacs, MS Surfaces, Google Pixels, Nexus, Huawei, Samsung or any other glued-on devices, we are not responsible and liable for damaged screens and other board issues during the repair.",
   "Motherboard work is not guaranteed and we are not liable for other damages on the board during the repair.",
   "The owner has backed up all the important data before handing the device over for inspection or repair.",
   "Canadian Cellular Communication Inc. management, staff or its agents are not liable for the device's termination (permanently disabled) due to any pre-existing conditions (e.g. water damage, software tampering, or impact damage).",

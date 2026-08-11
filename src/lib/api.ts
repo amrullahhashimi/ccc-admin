@@ -96,6 +96,77 @@ export interface Product {
   tracksSerials: boolean;
 }
 
+export interface SalePayment {
+  id: string;
+  amountCents: number;
+  method: string; // CASH | CARD | ETRANSFER | OTHER
+  reference?: string | null;
+  createdAt: string;
+}
+
+export interface SaleItem {
+  id: string;
+  productId?: string | null;
+  product?: { id: string; name: string; sku: string } | null;
+  name: string;
+  quantity: number;
+  unitPriceCents: number;
+  costCents: number;
+}
+
+export interface Sale {
+  id: string;
+  number: number;
+  customerId?: string | null;
+  customer?: Customer | null;
+  userId?: string | null;
+  user?: { id: string; name: string } | null;
+  locationId?: string | null;
+  location?: { id: string; name: string } | null;
+  subtotalCents: number;
+  taxCents: number;
+  totalCents: number;
+  status: string; // OPEN | PAID | REFUNDED | VOID
+  createdAt: string;
+  items?: SaleItem[];
+  payments?: SalePayment[];
+  _count?: { items: number };
+}
+
+export interface SaleLineInput {
+  productId?: string | null;
+  unitId?: string | null;
+  name: string;
+  quantity: number;
+  unitPriceCents: number;
+  costCents?: number;
+  taxable?: boolean;
+}
+
+export interface SalePaymentInput {
+  amountCents: number;
+  method: string;
+  reference?: string;
+}
+
+export const sales = {
+  list: (params: { q?: string; status?: string } = {}) => {
+    const p = new URLSearchParams();
+    if (params.q) p.set("q", params.q);
+    if (params.status) p.set("status", params.status);
+    const qs = p.toString();
+    return request<Sale[]>("/api/sales" + (qs ? `?${qs}` : ""));
+  },
+  get: (id: string) => request<Sale>(`/api/sales/${id}`),
+  create: (data: { customerId: string; locationId?: string | null; items: SaleLineInput[]; payments: SalePaymentInput[] }) =>
+    request<Sale>("/api/sales", { method: "POST", ...body(data) }),
+  addPayment: (id: string, data: SalePaymentInput) =>
+    request<Sale>(`/api/sales/${id}/payments`, { method: "POST", ...body(data) }),
+  cloverPay: (id: string, data: { amountCents: number }) =>
+    request<Sale>(`/api/sales/${id}/clover-pay`, { method: "POST", ...body(data) }),
+  void: (id: string) => request<Sale>(`/api/sales/${id}/void`, { method: "POST" }),
+};
+
 export interface StockEntry {
   id: string;
   productId: string;

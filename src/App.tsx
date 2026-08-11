@@ -20,6 +20,10 @@ import ServiceHome from "./pages/Inventory/ServiceHome";
 import ServicePage from "./pages/Inventory/ServicePage";
 import ServiceNewPage from "./pages/Inventory/ServiceNewPage";
 import TrackPage from "./pages/Inventory/Trackpage";
+import NewSalePage from "./pages/Sales/Newsalepage";
+import SalesPage from "./pages/Sales/Salespage";
+import SaleDetailPage from "./pages/Sales/Saledetailpage";
+import SalesHome from "./pages/Sales/Saleshome";
 
 
 export default function App() {
@@ -50,6 +54,11 @@ export default function App() {
             <Route path="/service/orders" element={<ServicePage />} />
             <Route path="/service/new" element={<ServiceNewPage />} />
             <Route path="/service/:id" element={<ServiceNewPage />} />
+            <Route path="/sales/new" element={<NewSalePage />} />
+            <Route path="/sales" element={<SalesPage />} />
+            <Route path="/sales/new" element={<NewSalePage />} />
+            <Route path="/sales/:id" element={<SaleDetailPage />} />
+            <Route path="/sales" element={<SalesHome />} />
             
           </Route>
 
