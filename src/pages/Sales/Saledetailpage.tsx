@@ -135,6 +135,12 @@ export default function SaleDetailPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Sale #{sale.number}</h1>
             {statusBadge(sale.status)}
+            {sale.source === "CLOVER" && (
+              <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">Clover</span>
+            )}
+            {sale.needsReview && (
+              <span className="rounded-full bg-error-50 px-2.5 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15 dark:text-error-400">Needs review</span>
+            )}
           </div>
         </div>
         <div className="flex gap-3">

@@ -293,7 +293,13 @@ module.exports = (prisma, requireRole) => {
     const apiBase = process.env.CLOVER_API_BASE || "https://apisandbox.dev.clover.com";
     const raid = process.env.CLOVER_RAID;
     const deviceId = process.env.CLOVER_DEVICE_ID;
-    const token = cloverStore.read()?.accessToken || process.env.CLOVER_OAUTH_TOKEN;
+
+    let token;
+    try {
+      token = await cloverStore.getAccessToken();
+    } catch {
+      token = process.env.CLOVER_OAUTH_TOKEN; // manual fallback for a token set outside the OAuth flow
+    }
 
     if (!raid || !deviceId || !token) {
       const e = new Error(

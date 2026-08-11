@@ -127,6 +127,8 @@ export interface Sale {
   taxCents: number;
   totalCents: number;
   status: string; // OPEN | PAID | REFUNDED | VOID
+  source: string; // APP | CLOVER
+  needsReview: boolean;
   createdAt: string;
   items?: SaleItem[];
   payments?: SalePayment[];

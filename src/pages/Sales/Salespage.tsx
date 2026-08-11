@@ -95,7 +95,17 @@ export default function SalesPage() {
                     <td className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">{custName(s.customer)}</td>
                     <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">{s._count?.items ?? "—"}</td>
                     <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-800 dark:text-white/90">{money(s.totalCents)}</td>
-                    <td className="px-5 py-3">{statusBadge(s.status)}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {statusBadge(s.status)}
+                        {s.source === "CLOVER" && (
+                          <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">Clover</span>
+                        )}
+                        {s.needsReview && (
+                          <span className="rounded-full bg-error-50 px-2.5 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15 dark:text-error-400">Needs review</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-5 py-3 text-sm text-gray-500">{new Date(s.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}

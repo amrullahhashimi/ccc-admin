@@ -82,6 +82,7 @@ app.use("/api/dashboard", requireLogin, require("./routes/dashboard")(prisma));
 app.use("/api/service", requireLogin, require("./routes/service")(prisma, requireRole));
 app.use("/api/track", require("./routes/track")(prisma));
 app.use("/oauth", require("./routes/clover")());
+app.use("/oauth", require("./routes/clover-webhook")(prisma));
 
 /* -------------------- serve the built React app -------------------- */
 // Vite builds the React app to <repo root>/dist. From server/src that's ../../dist.

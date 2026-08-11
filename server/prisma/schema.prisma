@@ -300,6 +300,10 @@ model Sale {
 
   status String @default("OPEN") // OPEN | PAID | REFUNDED | VOID
 
+  source        String  @default("APP") // APP | CLOVER
+  cloverOrderId String? @unique
+  needsReview   Boolean @default(false)
+
   createdAt DateTime @default(now())
 
   items    SaleItem[]
