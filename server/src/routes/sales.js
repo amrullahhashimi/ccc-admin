@@ -1,4 +1,5 @@
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 const cloverStore = require("../clover-store");
 
 const METHODS = ["CASH", "CARD", "ETRANSFER", "OTHER"];
@@ -27,7 +28,7 @@ module.exports = (prisma, requireRole) => {
   router.get("/", async (req, res) => {
     try {
       const { q, status } = req.query;
-      const where = {};
+      const where = { ...scope(req) };
       if (status) where.status = status;
       if (q) {
         const asNum = parseInt(q, 10);
@@ -55,8 +56,8 @@ module.exports = (prisma, requireRole) => {
 
   router.get("/:id", async (req, res) => {
     try {
-      const sale = await prisma.sale.findUnique({
-        where: { id: req.params.id },
+      const sale = await prisma.sale.findFirst({
+        where: { id: req.params.id, ...scope(req) },
         include: {
           customer: true,
           location: { select: { id: true, name: true } },
@@ -79,7 +80,7 @@ module.exports = (prisma, requireRole) => {
       const { customerId, locationId, items, payments } = req.body;
 
       if (!customerId) return res.status(400).json({ error: "A customer is required." });
-      const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+      const customer = await prisma.customer.findFirst({ where: { id: customerId, ...scope(req) } });
       if (!customer) return res.status(400).json({ error: "That customer no longer exists." });
 
       if (!Array.isArray(items) || items.length === 0) {
@@ -117,7 +118,7 @@ module.exports = (prisma, requireRole) => {
         // Move stock: serials → SOLD, quantity products → negative stock entry.
         for (const l of lines) {
           if (l.unitId) {
-            const unit = await tx.productUnit.findUnique({ where: { id: l.unitId } });
+            const unit = await tx.productUnit.findFirst({ where: { id: l.unitId, ...scope(req) } });
             if (!unit) throw new Error(`A serial on "${l.name}" no longer exists.`);
             if (unit.status !== "IN_STOCK") {
               throw new Error(`Serial ${unit.serial} is no longer in stock.`);
@@ -135,11 +136,12 @@ module.exports = (prisma, requireRole) => {
           }
         }
 
-        const last = await tx.sale.findFirst({ orderBy: { number: "desc" }, select: { number: true } });
+        const last = await tx.sale.findFirst({ where: scope(req), orderBy: { number: "desc" }, select: { number: true } });
         const number = (last?.number ?? 1000) + 1;
 
         return tx.sale.create({
           data: {
+            ...stamp(req),
             number,
             customerId,
             locationId: locationId || null,
@@ -181,8 +183,8 @@ module.exports = (prisma, requireRole) => {
   /** Add a payment to an existing sale; flips it to PAID once fully covered. */
   router.post("/:id/payments", async (req, res) => {
     try {
-      const sale = await prisma.sale.findUnique({
-        where: { id: req.params.id },
+      const sale = await prisma.sale.findFirst({
+        where: { id: req.params.id, ...scope(req) },
         include: { payments: true },
       });
       if (!sale) return res.status(404).json({ error: "Sale not found." });
@@ -227,8 +229,8 @@ module.exports = (prisma, requireRole) => {
    */
   router.post("/:id/void", requireRole("OWNER", "MANAGER"), async (req, res) => {
     try {
-      const sale = await prisma.sale.findUnique({
-        where: { id: req.params.id },
+      const sale = await prisma.sale.findFirst({
+        where: { id: req.params.id, ...scope(req) },
         include: { items: true },
       });
       if (!sale) return res.status(404).json({ error: "Sale not found." });
@@ -339,8 +341,8 @@ module.exports = (prisma, requireRole) => {
 
   router.post("/:id/clover-pay", async (req, res) => {
     try {
-      const sale = await prisma.sale.findUnique({
-        where: { id: req.params.id },
+      const sale = await prisma.sale.findFirst({
+        where: { id: req.params.id, ...scope(req) },
         include: { payments: true },
       });
       if (!sale) return res.status(404).json({ error: "Sale not found." });

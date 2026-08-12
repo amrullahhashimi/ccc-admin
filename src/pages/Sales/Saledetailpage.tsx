@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { money, sales as salesApi, type Customer, type Sale } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useStore } from "../../context/StoreContext";
 
 const panelClass = "rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
 
@@ -30,6 +31,7 @@ export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { can } = useAuth();
+  const { store } = useStore(); // receipt header comes from Store settings
 
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function SaleDetailPage() {
       .join("");
     win.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>Receipt #${sale.number}</title>
 <style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;padding:12px;max-width:320px;margin:0 auto}h1{font-size:15px;margin:0 0 2px}.muted{color:#666;font-size:11px}table{width:100%;border-collapse:collapse;margin-top:8px}td{padding:2px 0}.line{border-top:1px dashed #999;margin:8px 0}.tot td{font-weight:bold}</style></head><body>
-  <h1>Canadian Cellular Communications</h1>
+  <h1>${escapeHtml(store?.name ?? "Canadian Cellular Communications")}</h1>
   <div class="muted">${escapeHtml(sale.location?.name ?? "")}</div>
   <div class="muted">Sale #${sale.number} · ${new Date(sale.createdAt).toLocaleString()}</div>
   <div class="muted">Customer: ${escapeHtml(custName(sale.customer))}</div>

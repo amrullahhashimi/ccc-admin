@@ -1,28 +1,29 @@
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 const bcrypt = require("bcryptjs");
 
 module.exports = (prisma, requireRole) => {
   const router = express.Router();
 
 // Everything the forms need in one call
-  router.get("/", async (_req, res) => {
+  router.get("/", async (req, res) => {
     const [categories, vendors, locations, brands] = await Promise.all([
       prisma.category.findMany({
-        where: { active: true },
+        where: { active: true, ...scope(req) },
         orderBy: { name: "asc" },
         include: { parent: { select: { id: true, name: true } } },
       }),
       prisma.vendor.findMany({
-        where: { active: true },
+        where: { active: true, ...scope(req) },
         orderBy: { name: "asc" },
         select: { id: true, name: true },
       }),
       prisma.location.findMany({
-        where: { active: true },
+        where: { active: true, ...scope(req) },
         orderBy: { name: "asc" },
       }),
       prisma.brand.findMany({
-        where: { active: true },
+        where: { active: true, ...scope(req) },
         orderBy: { name: "asc" },
         select: { id: true, name: true },
       }),
@@ -46,7 +47,7 @@ module.exports = (prisma, requireRole) => {
     if (!name?.trim()) return res.status(400).json({ error: "Location name is required." });
     try {
       res.status(201).json(
-        await prisma.location.create({ data: { name: name.trim(), address: address || null } })
+        await prisma.location.create({ data: { name: name.trim(), address: address || null, ...stamp(req) } })
       );
     } catch (err) {
       if (err.code === "P2002") return res.status(409).json({ error: "That location already exists." });
@@ -56,8 +57,9 @@ module.exports = (prisma, requireRole) => {
 
   /* ------------------------------ staff ------------------------------ */
 
-  router.get("/users", requireRole("OWNER", "MANAGER"), async (_req, res) => {
+  router.get("/users", requireRole("OWNER", "MANAGER"), async (req, res) => {
     const users = await prisma.user.findMany({
+      where: scope(req),
       orderBy: { name: "asc" },
       select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
     });
@@ -82,6 +84,7 @@ module.exports = (prisma, requireRole) => {
           email: email.toLowerCase().trim(),
           role,
           passwordHash: await bcrypt.hash(password, 12),
+          ...stamp(req),
         },
         select: { id: true, name: true, email: true, role: true, active: true },
       });
@@ -109,6 +112,9 @@ module.exports = (prisma, requireRole) => {
     }
 
     try {
+      const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { storeId: true } });
+      if (!assertStore(req, res, target, "user")) return;
+
       const user = await prisma.user.update({
         where: { id: req.params.id },
         data,

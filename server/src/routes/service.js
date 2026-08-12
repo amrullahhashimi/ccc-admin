@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 
 // Stored enum (the DB model is still `Ticket`) ← → what the UI shows.
 const STATUSES = ["INTAKE", "DIAGNOSING", "WAITING_PARTS", "READY", "COLLECTED", "CANCELLED"];
@@ -57,7 +58,7 @@ module.exports = (prisma, requireRole) => {
   router.get("/", async (req, res) => {
     try {
       const { q, status, customerId } = req.query;
-      const where = {};
+      const where = { ...scope(req) };
       if (status && STATUSES.includes(status)) where.status = status;
       if (customerId) where.customerId = customerId;
       if (q) {
@@ -88,7 +89,7 @@ module.exports = (prisma, requireRole) => {
 
   /* ------------------------------- one ------------------------------- */
   router.get("/:id", async (req, res) => {
-    const t = await prisma.ticket.findUnique({ where: { id: req.params.id }, include });
+    const t = await prisma.ticket.findFirst({ where: { id: req.params.id, ...scope(req) }, include });
     if (!t) return res.status(404).json({ error: "Service order not found." });
     res.json(withTotals(t));
   });
@@ -97,16 +98,17 @@ module.exports = (prisma, requireRole) => {
   router.post("/", async (req, res) => {
     try {
       if (!req.body?.customerId) return res.status(400).json({ error: "Pick a customer." });
-      const customer = await prisma.customer.findUnique({ where: { id: req.body.customerId } });
+      const customer = await prisma.customer.findFirst({ where: { id: req.body.customerId, ...scope(req) } });
       if (!customer) return res.status(400).json({ error: "That customer no longer exists." });
 
       // Next service number — sequence starts at 1001.
-      const last = await prisma.ticket.findFirst({ orderBy: { number: "desc" }, select: { number: true } });
+      const last = await prisma.ticket.findFirst({ where: scope(req), orderBy: { number: "desc" }, select: { number: true } });
       const number = (last?.number ?? 1000) + 1;
 
       const created = await prisma.ticket.create({
         data: {
           number,
+          ...stamp(req),
           customerId: req.body.customerId,
           trackToken: crypto.randomBytes(16).toString("hex"),
           ...shapeService(req.body),
@@ -141,7 +143,10 @@ module.exports = (prisma, requireRole) => {
   // Add a part (from inventory, has productId) or a labour line (no productId).
   router.post("/:id/lines", async (req, res) => {
     try {
-      const t = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+      const owner = await prisma.ticket.findUnique({ where: { id: req.params.id }, select: { storeId: true } });
+      if (!assertStore(req, res, owner, "service ticket")) return;
+    
+      const t = await prisma.ticket.findFirst({ where: { id: req.params.id, ...scope(req) } });
       if (!t) return res.status(404).json({ error: "Service order not found." });
 
       const isPart = !!req.body?.productId;
@@ -152,7 +157,7 @@ module.exports = (prisma, requireRole) => {
           : 0;
 
       if (isPart) {
-        const product = await prisma.product.findUnique({ where: { id: req.body.productId } });
+        const product = await prisma.product.findFirst({ where: { id: req.body.productId, ...scope(req) } });
         if (!product) return res.status(400).json({ error: "That product no longer exists." });
         if (!name) name = product.name;
         if (req.body.price === undefined || req.body.price === "") priceCents = product.salePriceCents;
@@ -179,6 +184,9 @@ module.exports = (prisma, requireRole) => {
 
   router.patch("/lines/:lineId", async (req, res) => {
     try {
+      const part = await prisma.ticketPart.findUnique({ where: { id: req.params.lineId }, select: { ticket: { select: { storeId: true } } } });
+      if (!assertStore(req, res, part?.ticket, "service line")) return;
+    
       const data = {};
       if (req.body?.name !== undefined) data.name = String(req.body.name).trim();
       if (req.body?.quantity !== undefined) data.quantity = Math.max(1, parseInt(req.body.quantity, 10) || 1);
@@ -199,6 +207,9 @@ module.exports = (prisma, requireRole) => {
 
   router.delete("/lines/:lineId", async (req, res) => {
     try {
+      const part = await prisma.ticketPart.findUnique({ where: { id: req.params.lineId }, select: { ticket: { select: { storeId: true } } } });
+      if (!assertStore(req, res, part?.ticket, "service line")) return;
+    
       await prisma.ticketPart.delete({ where: { id: req.params.lineId } });
       res.json({ ok: true });
     } catch (err) {
@@ -210,7 +221,7 @@ module.exports = (prisma, requireRole) => {
   /* ------------------------------ delete ------------------------------ */
   router.delete("/:id", requireRole("OWNER", "MANAGER"), async (req, res) => {
     try {
-      const t = await prisma.ticket.findUnique({ where: { id: req.params.id }, include: { sale: true } });
+      const t = await prisma.ticket.findFirst({ where: { id: req.params.id, ...scope(req) }, include: { sale: true } });
       if (!t) return res.status(404).json({ error: "Service order not found." });
       if (t.sale) {
         return res.status(409).json({ error: "This service order has a sale attached — it can't be deleted." });

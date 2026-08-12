@@ -1,3 +1,4 @@
+import { useStore } from "../context/StoreContext";
 import { useState } from "react";
 
 import { Link } from "react-router";
@@ -7,6 +8,7 @@ import UserDropdown from "../components/header/UserDropdown";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const { logo, store } = useStore();
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
@@ -68,13 +70,13 @@ const AppHeader: React.FC = () => {
           <Link to="/" className="lg:hidden">
             <img
               className="dark:hidden"
-              src="/images/logo/logo.svg"
-              alt="CCC Admin"
+              src={logo("logoLight")}
+              alt={store?.name ?? "CCC Admin"}
             />
             <img
               className="hidden dark:block"
-              src="/images/logo/logo-dark.svg"
-              alt="CCC Admin"
+              src={logo("logoDark")}
+              alt={store?.name ?? "CCC Admin"}
             />
           </Link>
 

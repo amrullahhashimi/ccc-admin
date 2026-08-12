@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useStore } from "../../context/StoreContext";
 
-const TERMS = [
+/** Shown until a store writes its own terms in Store settings. */
+const DEFAULT_TERMS = [
   "Motherboard work is not guaranteed and we are not liable for other damages on the board during the repair.",
   "The owner has backed up all the important data before handing the device over for inspection or repair.",
   "Canadian Cellular Communication Inc. management, staff or its agents are not liable for the device's termination (permanently disabled) due to any pre-existing conditions (e.g. water damage, software tampering, or impact damage).",
@@ -14,6 +16,13 @@ const TERMS = [
 // A modal that shows the terms + "I agree" checkbox, then a signature pad.
 // onSave receives a PNG data URL.
 export default function SignaturePad({ onSave, onClose }: { onSave: (dataUrl: string) => void; onClose: () => void }) {
+  const { store } = useStore();
+  // One clause per line, exactly as typed in Store settings.
+  const ownTerms = (store?.serviceTerms ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const TERMS = ownTerms.length ? ownTerms : DEFAULT_TERMS;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [agreed, setAgreed] = useState(false);
   const [hasInk, setHasInk] = useState(false);

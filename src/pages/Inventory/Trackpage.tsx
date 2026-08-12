@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 
 type Track = {
+  /** The shop this repair belongs to — its own name, logo and contact details. */
+  store?: {
+    name: string;
+    logo?: string | null;
+    phone?: string | null;
+    website?: string | null;
+    address?: string | null;
+  } | null;
   number: number;
   status: string;
   deviceMake?: string | null;
@@ -71,8 +79,22 @@ export default function TrackPage() {
       <div className="mx-auto w-full max-w-lg">
         {/* header */}
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Canadian Cellular Communication</h1>
+          {data?.store?.logo && (
+            <img
+              src={data.store.logo}
+              alt={data.store.name}
+              className="mx-auto mb-3 max-h-14 max-w-[220px] object-contain"
+            />
+          )}
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {data?.store?.name ?? "Repair tracking"}
+          </h1>
           <p className="mt-1 text-sm text-gray-500">Repair status</p>
+          {data?.store && (data.store.phone || data.store.website) && (
+            <p className="mt-1 text-xs text-gray-400">
+              {[data.store.phone, data.store.website].filter(Boolean).join(" · ")}
+            </p>
+          )}
         </div>
 
         {loading ? (

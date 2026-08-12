@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { useStore } from "../../context/StoreContext";
 import {
   customers as customersApi,
   meta as metaApi,
@@ -48,6 +49,7 @@ const nextKey = () => `k${++keySeq}`;
 
 export default function NewSalePage() {
   const navigate = useNavigate();
+  const { store } = useStore(); // receipt header comes from Store settings
   const [meta, setMeta] = useState<Meta | null>(null);
   const [locationId, setLocationId] = useState("");
 
@@ -242,7 +244,7 @@ export default function NewSalePage() {
   .line{border-top:1px dashed #999;margin:8px 0}
   .tot td{font-weight:bold}
 </style></head><body>
-  <h1>Canadian Cellular Communications</h1>
+  <h1>${escapeHtml(store?.name ?? "Canadian Cellular Communications")}</h1>
   <div class="muted">${escapeHtml(loc?.name ?? "")}</div>
   <div class="muted">Sale #${sale.number} · ${new Date(sale.createdAt).toLocaleString()}</div>
   <div class="muted">Customer: ${escapeHtml(custName(sale.customer as Customer) || "—")}</div>

@@ -1,4 +1,5 @@
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 
 /** Only `name` is required — everything else is optional. */
 function shape(body) {
@@ -42,7 +43,7 @@ module.exports = (prisma, requireRole) => {
   router.get("/", async (req, res) => {
     const { q, includeInactive } = req.query;
 
-    const where = {};
+    const where = { ...scope(req) };
     if (!includeInactive) where.active = true;
     if (q) {
       where.OR = [
@@ -65,8 +66,8 @@ module.exports = (prisma, requireRole) => {
   });
 
   router.get("/:id", async (req, res) => {
-    const vendor = await prisma.vendor.findUnique({
-      where: { id: req.params.id },
+    const vendor = await prisma.vendor.findFirst({
+      where: { id: req.params.id, ...scope(req) },
       include: { _count: { select: { products: true } } },
     });
     if (!vendor) return res.status(404).json({ error: "Vendor not found." });
@@ -77,7 +78,7 @@ module.exports = (prisma, requireRole) => {
     try {
       const data = shape(req.body);
       if (!data.name) return res.status(400).json({ error: "Vendor name is required." });
-      const created = await prisma.vendor.create({ data });
+      const created = await prisma.vendor.create({ data: { ...data, ...stamp(req) } });
       res.status(201).json(created);
     } catch (err) {
       if (err.code === "P2002") {
@@ -91,6 +92,13 @@ module.exports = (prisma, requireRole) => {
     try {
       const data = shape(req.body);
       if (data.name === null) return res.status(400).json({ error: "Vendor name is required." });
+
+      const existing = await prisma.vendor.findUnique({
+        where: { id: req.params.id },
+        select: { storeId: true },
+      });
+      if (!assertStore(req, res, existing, "vendor")) return;
+
       const updated = await prisma.vendor.update({ where: { id: req.params.id }, data });
       res.json(updated);
     } catch (err) {
@@ -112,7 +120,7 @@ module.exports = (prisma, requireRole) => {
         where: { id: req.params.id },
         include: { _count: { select: { products: true } } },
       });
-      if (!vendor) return res.status(404).json({ error: "Vendor not found." });
+      if (!assertStore(req, res, vendor, "vendor")) return;
 
       if (vendor._count.products > 0) {
         await prisma.vendor.update({ where: { id: req.params.id }, data: { active: false } });

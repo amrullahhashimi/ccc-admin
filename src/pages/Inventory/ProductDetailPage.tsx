@@ -13,6 +13,7 @@ import {
   type ProductUnit,
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useStore } from "../../context/StoreContext";
 import { printUnitLabel } from "./printLabel";
 
 const inputClass =
@@ -211,6 +212,7 @@ function SerialsTab({
   onChanged: () => void;
 }) {
   const { can } = useAuth();
+  const { store } = useStore(); // label size comes from Store settings
   const [units, setUnits] = useState<ProductUnit[]>(product.units ?? []);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -381,7 +383,7 @@ function SerialsTab({
                   )}
                   {u.status === "IN_STOCK" && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); printUnitLabel(product, u); }}
+                      onClick={(e) => { e.stopPropagation(); printUnitLabel(product, u, store); }}
                       className="text-xs font-medium text-brand-500 hover:text-brand-600"
                     >
                       Print
@@ -700,6 +702,7 @@ export default function ProductDetailPage() {
 
   if (loading) return <p className="p-10 text-center text-sm text-gray-500">Loading…</p>;
   if (error || !product) return <p className="p-10 text-center text-sm text-error-500">{error || "Not found."}</p>;
+
 
   const units = product.units ?? [];
   const onHand = product.quantity;

@@ -1,6 +1,7 @@
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 
-const CONDITIONS = ["NEW", "OPEN_BOX", "USED_LIKE_NEW", "USED_GOOD", "USED_FAIR", "FOR_PARTS"];
+const CONDITIONS =["NEW", "OPEN_BOX", "USED_LIKE_NEW", "USED_GOOD", "USED_FAIR", "FOR_PARTS"];
 
 /** Form fields → what Prisma expects. Money arrives in dollars, stored as cents. */
 function shapeProduct(body) {
@@ -69,6 +70,36 @@ module.exports = (prisma, requireRole) => {
   const router = express.Router();
 
   /**
+   * These three keep another store's records out of reach. Each answers the
+   * request itself and returns false when the row isn't ours, so callers only
+   * need `if (!(await guardX(...))) return;`.
+   */
+  async function guardProduct(req, res, productId) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { storeId: true },
+    });
+    return assertStore(req, res, product, "product");
+  }
+
+  /** Serials and stock entries belong to whichever store owns the item. */
+  async function guardUnit(req, res, unitId) {
+    const unit = await prisma.productUnit.findUnique({
+      where: { id: unitId },
+      select: { storeId: true },
+    });
+    return assertStore(req, res, unit, "serial");
+  }
+
+  async function guardStockEntry(req, res, entryId) {
+    const entry = await prisma.stockEntry.findUnique({
+      where: { id: entryId },
+      select: { product: { select: { storeId: true } } },
+    });
+    return assertStore(req, res, entry?.product, "stock entry");
+  }
+
+  /**
    * Quantity is the sum of stock entries. Average cost is weighted across
    * the batches you actually received — buy 10 at $100 then 10 at $200 and
    * it's $150, not whatever the Details tab happens to say.
@@ -89,7 +120,7 @@ module.exports = (prisma, requireRole) => {
     try {
       const { q, location, condition, lowStock, includeInactive } = req.query;
 
-      const where = {};
+      const where = { ...scope(req) };
       if (!includeInactive) where.active = true;
       if (q) {
         where.OR = [
@@ -135,8 +166,8 @@ module.exports = (prisma, requireRole) => {
   });
 
   router.get("/:id", async (req, res) => {
-    const product = await prisma.product.findUnique({
-      where: { id: req.params.id },
+    const product = await prisma.product.findFirst({
+      where: { id: req.params.id, ...scope(req) },
       include: {
         brand: true,
         category: { include: { parent: { select: { name: true } } } },
@@ -171,7 +202,10 @@ module.exports = (prisma, requireRole) => {
         ["vendorId", "vendor", "vendor"],
       ]) {
         if (data[field]) {
-          const found = await prisma[model].findUnique({ where: { id: data[field] } });
+          // Scoped, so one store can't attach another's brand or vendor.
+          const found = await prisma[model].findFirst({
+            where: { id: data[field], ...scope(req) },
+          });
           if (!found) {
             return res.status(400).json({
               error: `That ${label} no longer exists. Refresh the page and pick again.`,
@@ -192,8 +226,10 @@ module.exports = (prisma, requireRole) => {
       }
 
       if (units.length) {
+        // Serials only have to be unique within the store — another shop may
+        // legitimately have handled the same handset.
         const clash = await prisma.productUnit.findFirst({
-          where: { serial: { in: [...seen] } },
+          where: { serial: { in: [...seen] }, ...scope(req) },
           select: { serial: true },
         });
         if (clash) {
@@ -201,13 +237,20 @@ module.exports = (prisma, requireRole) => {
         }
       }
 
+      // SKUs run per store, so each shop gets its own CCC-000001 upwards.
       if (!data.sku) {
-        const count = await prisma.product.count();
+        const count = await prisma.product.count({ where: scope(req) });
         data.sku = "CCC-" + String(count + 1).padStart(6, "0");
       }
 
       const created = await prisma.product.create({
-        data: { ...data, units: units.length ? { create: units } : undefined },
+        data: {
+          ...data,
+          ...stamp(req),
+          units: units.length
+            ? { create: units.map((u) => ({ ...u, ...stamp(req) })) }
+            : undefined,
+        },
         include: { units: true, stockEntries: true },
       });
 
@@ -222,6 +265,8 @@ module.exports = (prisma, requireRole) => {
 
   router.patch("/:id", async (req, res) => {
     try {
+      if (!(await guardProduct(req, res, req.params.id))) return;
+
       const updated = await prisma.product.update({
         where: { id: req.params.id },
         data: shapeProduct(req.body),
@@ -243,14 +288,15 @@ module.exports = (prisma, requireRole) => {
   /** Add more serials to an existing product. */
   router.post("/:id/units", async (req, res) => {
     try {
-      const product = await prisma.product.findUnique({ where: { id: req.params.id } });
-      if (!product) return res.status(404).json({ error: "Product not found." });
+      if (!(await guardProduct(req, res, req.params.id))) return;
 
       const incoming = Array.isArray(req.body.units) ? req.body.units : [req.body];
       const units = incoming.map(shapeUnit);
 
       const created = await prisma.$transaction(
-        units.map((u) => prisma.productUnit.create({ data: { ...u, productId: req.params.id } }))
+        units.map((u) =>
+          prisma.productUnit.create({ data: { ...u, productId: req.params.id, ...stamp(req) } })
+        )
       );
       res.status(201).json(created);
     } catch (err) {
@@ -263,6 +309,8 @@ module.exports = (prisma, requireRole) => {
 
   router.patch("/units/:unitId", async (req, res) => {
     try {
+      if (!(await guardUnit(req, res, req.params.unitId))) return;
+
       const data = {};
       if (req.body?.serial !== undefined) {
         const serial = String(req.body.serial).trim();
@@ -310,6 +358,8 @@ module.exports = (prisma, requireRole) => {
    */
   router.post("/units/:unitId/sell", async (req, res) => {
     try {
+      if (!(await guardUnit(req, res, req.params.unitId))) return;
+
       const unit = await prisma.productUnit.findUnique({
         where: { id: req.params.unitId },
         include: { product: { select: { costCents: true } } },
@@ -343,6 +393,8 @@ module.exports = (prisma, requireRole) => {
    */
   router.post("/units/:unitId/return", async (req, res) => {
     try {
+      if (!(await guardUnit(req, res, req.params.unitId))) return;
+
       const unit = await prisma.productUnit.findUnique({ where: { id: req.params.unitId } });
       if (!unit) return res.status(404).json({ error: "Serial not found." });
       if (unit.status === "IN_STOCK") {
@@ -359,6 +411,8 @@ module.exports = (prisma, requireRole) => {
   /** Only unsold units can be deleted — sold ones are history. */
   router.delete("/units/:unitId", requireRole("OWNER", "MANAGER"), async (req, res) => {
     try {
+      if (!(await guardUnit(req, res, req.params.unitId))) return;
+
       const unit = await prisma.productUnit.findUnique({ where: { id: req.params.unitId } });
       if (!unit) return res.status(404).json({ error: "Serial not found." });
       if (unit.status === "SOLD") {
@@ -376,6 +430,8 @@ module.exports = (prisma, requireRole) => {
   /** Receive stock. Quantity can be negative to correct a mistake. */
   router.post("/:id/stock", async (req, res) => {
     try {
+      if (!(await guardProduct(req, res, req.params.id))) return;
+
       const product = await prisma.product.findUnique({ where: { id: req.params.id } });
       if (!product) return res.status(404).json({ error: "Product not found." });
 
@@ -391,7 +447,7 @@ module.exports = (prisma, requireRole) => {
 
       const vendorId = req.body?.vendorId || null;
       if (vendorId) {
-        const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
+        const vendor = await prisma.vendor.findFirst({ where: { id: vendorId, ...scope(req) } });
         if (!vendor) return res.status(400).json({ error: "That vendor no longer exists." });
       }
 
@@ -414,6 +470,8 @@ module.exports = (prisma, requireRole) => {
 
   router.delete("/stock/:entryId", requireRole("OWNER", "MANAGER"), async (req, res) => {
     try {
+      if (!(await guardStockEntry(req, res, req.params.entryId))) return;
+
       await prisma.stockEntry.delete({ where: { id: req.params.entryId } });
       res.json({ ok: true });
     } catch (err) {
@@ -425,6 +483,8 @@ module.exports = (prisma, requireRole) => {
   /** Archive rather than delete — sales history must keep pointing somewhere. */
   router.delete("/:id", requireRole("OWNER", "MANAGER"), async (req, res) => {
     try {
+      if (!(await guardProduct(req, res, req.params.id))) return;
+
       await prisma.product.update({ where: { id: req.params.id }, data: { active: false } });
       res.json({ ok: true });
     } catch (err) {

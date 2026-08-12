@@ -1,4 +1,5 @@
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 
 module.exports = (prisma, requireRole) => {
   const router = express.Router();
@@ -6,7 +7,7 @@ module.exports = (prisma, requireRole) => {
   router.get("/", async (req, res) => {
     const { q, includeInactive } = req.query;
 
-    const where = {};
+    const where = { ...scope(req) };
     if (!includeInactive) where.active = true;
     if (q) where.name = { contains: q };
 
@@ -24,7 +25,7 @@ module.exports = (prisma, requireRole) => {
       if (!name) return res.status(400).json({ error: "Brand name is required." });
 
       const notes = String(req.body?.notes ?? "").trim() || null;
-      const created = await prisma.brand.create({ data: { name, notes } });
+      const created = await prisma.brand.create({ data: { name, notes, ...stamp(req) } });
       res.status(201).json(created);
     } catch (err) {
       if (err.code === "P2002") {
@@ -47,6 +48,12 @@ module.exports = (prisma, requireRole) => {
       }
       if (req.body?.active !== undefined) data.active = !!req.body.active;
 
+      const existing = await prisma.brand.findUnique({
+        where: { id: req.params.id },
+        select: { storeId: true },
+      });
+      if (!assertStore(req, res, existing, "brand")) return;
+
       const updated = await prisma.brand.update({ where: { id: req.params.id }, data });
       res.json(updated);
     } catch (err) {
@@ -65,7 +72,7 @@ module.exports = (prisma, requireRole) => {
         where: { id: req.params.id },
         include: { _count: { select: { products: true } } },
       });
-      if (!brand) return res.status(404).json({ error: "Brand not found." });
+      if (!assertStore(req, res, brand, "brand")) return;
 
       if (brand._count.products > 0) {
         await prisma.brand.update({ where: { id: req.params.id }, data: { active: false } });

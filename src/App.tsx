@@ -5,6 +5,7 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import { AuthProvider, RequireAuth } from "./context/AuthContext";
+import { StoreProvider } from "./context/StoreContext";
 
 // Uncomment each once the page file exists.
 import InventoryHome from "./pages/Inventory/InventoryHome";
@@ -23,13 +24,18 @@ import TrackPage from "./pages/Inventory/Trackpage";
 import NewSalePage from "./pages/Sales/Newsalepage";
 import SalesPage from "./pages/Sales/Salespage";
 import SaleDetailPage from "./pages/Sales/Saledetailpage";
-import SalesHome from "./pages/Sales/Saleshome";
+import ToolsHome from "./pages/Tools/ToolsHome";
+import ImeiCheckerPage from "./pages/Tools/ImeiCheckerPage";
+import StoreSettingsPage from "./pages/Store/StoreSettingsPage";
+import SharingPage from "./pages/Store/SharingPage";
+import MasterPage from "./pages/Master/MasterPage";
 
 
 export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <StoreProvider>
         <ScrollToTop />
         <Routes>
           {/* Everything inside here needs a signed-in user */}
@@ -40,7 +46,6 @@ export default function App() {
               </RequireAuth>
             }
           >
-            <Route index path="/" element={<Home />} />
             <Route path="/inventory" element={<InventoryHome />} />
             <Route path="/inventory/vendors" element={<VendorsPage />} />
             <Route path="/inventory/categories" element={<CategoriesPage />} />
@@ -49,6 +54,7 @@ export default function App() {
             <Route path="/inventory/search" element={<ItemSearchPage />} />
             <Route path="/inventory/items/:id" element={<ProductDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route index path="/" element={<Home />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/service" element={<ServiceHome />} />
             <Route path="/service/orders" element={<ServicePage />} />
@@ -56,10 +62,13 @@ export default function App() {
             <Route path="/service/:id" element={<ServiceNewPage />} />
             <Route path="/sales/new" element={<NewSalePage />} />
             <Route path="/sales" element={<SalesPage />} />
-            <Route path="/sales/new" element={<NewSalePage />} />
             <Route path="/sales/:id" element={<SaleDetailPage />} />
-            <Route path="/sales" element={<SalesHome />} />
-            
+            <Route path="/tools" element={<ToolsHome />} />
+            <Route path="/tools/imei" element={<ImeiCheckerPage />} />
+            <Route path="/store" element={<StoreSettingsPage />} />
+            <Route path="/store/sharing" element={<SharingPage />} />
+            <Route path="/master" element={<MasterPage />} />
+
           </Route>
 
           {/* Public */}
@@ -72,6 +81,7 @@ export default function App() {
         <Route path="/track/:token" element={<TrackPage />} />
 
         </Routes>
+        </StoreProvider>
       </AuthProvider>
     </Router>
   );

@@ -1,9 +1,8 @@
-import type { Service } from "../../lib/api";
+import type { Service, Store } from "../../lib/api";
 
-/* ─────────────── store details — edit these ─────────────── */
+/* ────── fallbacks, used only until a store fills in its settings ────── */
 const STORE_NAME = "Canadian Cellular Communication";
 const WEBSITE = "www.caceco.ca";
-const SERVICES_SITE = "www.services.caceco.ca";
 // Per-location contact. Keys are matched (lowercase) against the order's location name.
 const LOCATIONS: Record<string, { address: string; phone: string }> = {
   glendale:  { address: "3931 17 Ave SW, Calgary, AB T3E 7E7",   phone: "(403) 436-6565" },
@@ -11,6 +10,22 @@ const LOCATIONS: Record<string, { address: string; phone: string }> = {
 };
 // Logo served from your public folder (Vite serves /public at the web root).
 const LOGO_PATH = "/images/logo/logo.svg";
+
+/**
+ * Printed when a store hasn't written its own terms in Store settings.
+ * One line per clause; the settings box works the same way.
+ */
+const DEFAULT_TERMS = [
+  "For iPhones 12 and up, iPads, iMacs, MS Surfaces, Google Pixels, Nexus, Huawei, Samsung or any other glued-on devices, we are not responsible and liable for damaged screens and other board issues during the repair.",
+  "Motherboard work is not guaranteed and we are not liable for other damages on the board during the repair.",
+  "The owner has backed up all the important data before handing the device over for inspection or repair.",
+  "Canadian Cellular Communication Inc. management, staff or its agents are not liable for the device’s termination (permanently disabled) due to any pre-existing conditions (e.g. water damage, software tampering, or impact damage).",
+  "The owner must be ready to reply and confirm the repair cost via email, voicemail, call or text.",
+  "Repaired or broken devices lose their water-resistant status and are not meant to be submerged even if sealed.",
+  "All repaired devices must be paid for in full within thirty (30) days; otherwise the device will be kept in lieu of payment. There is no exception to this unless prior written consent was given by one of Canadian Cellular Communication employees.",
+  "Canadian Cellular Communication Inc. will provide a thirty (30) day warranty on specific repair work done from the pickup date.",
+  "Canadian Cellular Communication Inc. will hold your device no longer than a period of 6 months or 185 days, after which your device will be recycled, and we will not be responsible for your data or your device.",
+];
 /* ────────────────────────────────────────────────────────── */
 
 const esc = (s: unknown) =>
@@ -62,12 +77,17 @@ export function printTag(s: Service) {
 }
 
 /* ───────────────────────── INVOICE (A4, one page) ───────────────────────── */
-export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?: string }) {
-  const storeName = opts?.storeName ?? STORE_NAME;
-
+export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?: string; store?: Store | null }) {
+  const st = opts?.store ?? null;
+  const storeName = st?.name ?? opts?.storeName ?? STORE_NAME;
+  const website = st?.website || WEBSITE;
+  // Settings win. The per-location list below is only a fallback for a store
+  // that hasn't filled its address in yet.
   const locName = (typeof s.location === "string" ? s.location : s.location?.name ?? "").toLowerCase();
   const key = Object.keys(LOCATIONS).find((k) => locName.includes(k));
-  const loc = key ? LOCATIONS[key] : null;
+  const fallbackLoc = key ? LOCATIONS[key] : null;
+  const address = st?.address || fallbackLoc?.address || "";
+  const phone = st?.phone || fallbackLoc?.phone || "";
 
   const parts = (s.parts ?? []).map((l) => ({
     name: l.name, qty: l.quantity, each: l.priceCents, total: l.quantity * l.priceCents,
@@ -79,6 +99,17 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
   const balance = total - deposit;
 
   const origin = window.location.origin;
+  // The store's own logo when it has uploaded one, otherwise the bundled file.
+  const logoSrc = st?.logoLight || `${origin}${LOGO_PATH}`;
+
+  // The store's own terms, one clause per line, or the built-in set.
+  const clauses = (st?.serviceTerms ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const termsHtml = (clauses.length ? clauses : DEFAULT_TERMS)
+    .map((line) => `<li>${esc(line)}</li>`)
+    .join("\n        ");
   const qr = opts?.trackUrl
     ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(opts.trackUrl)}" alt="Track" />`
     : "";
@@ -158,9 +189,12 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
 
     <div class="head">
       <div class="brand">
-        <img src="${origin}${LOGO_PATH}" alt="${esc(storeName)}" />
+        <img src="${logoSrc}" alt="${esc(storeName)}" />
         <div class="contact">
-          ${loc ? `<strong>${esc(loc.address)}</strong><br>${esc(loc.phone)} &nbsp;·&nbsp; ${esc(WEBSITE)} &nbsp;·&nbsp; ${esc(SERVICES_SITE)}` : `${esc(WEBSITE)} &nbsp;·&nbsp; ${esc(SERVICES_SITE)}`}
+          ${address ? `<strong>${esc(address)}</strong><br>` : ""}${[phone, website]
+            .filter(Boolean)
+            .map(esc)
+            .join(" &nbsp;·&nbsp; ")}
         </div>
       </div>
       <div class="invblock">
@@ -205,15 +239,7 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
     <div class="terms">
       <h3>Terms &amp; Conditions</h3>
       <ol>
-        <li>For iPhones 12 and up, iPads, iMacs, MS Surfaces, Google Pixels, Nexus, Huawei, Samsung or any other glued-on devices, we are not responsible and liable for damaged screens and other board issues during the repair.</li>
-        <li>Motherboard work is not guaranteed and we are not liable for other damages on the board during the repair.</li>
-        <li>The owner has backed up all the important data before handing the device over for inspection or repair.</li>
-        <li>Canadian Cellular Communication Inc. management, staff or its agents are not liable for the device&rsquo;s termination (permanently disabled) due to any pre-existing conditions (e.g. water damage, software tampering, or impact damage).</li>
-        <li>The owner must be ready to reply and confirm the repair cost via email, voicemail, call or text.</li>
-        <li>Repaired or broken devices lose their water-resistant status and are not meant to be submerged even if sealed.</li>
-        <li>All repaired devices must be paid for in full within thirty (30) days; otherwise the device will be kept in lieu of payment. There is no exception to this unless prior written consent was given by one of Canadian Cellular Communication employees.</li>
-        <li>Canadian Cellular Communication Inc. will provide a thirty (30) day warranty on specific repair work done from the pickup date.</li>
-        <li>Canadian Cellular Communication Inc. will hold your device no longer than a period of 6 months or 185 days, after which your device will be recycled, and we will not be responsible for your data or your device.</li>
+        ${termsHtml}
       </ol>
       <p class="agree">I understand and agree to all terms and conditions mentioned above.</p>
 
@@ -229,7 +255,9 @@ export function printInvoice(s: Service, opts?: { trackUrl?: string; storeName?:
       </div>
     </div>
 
-    <div class="foot">Thank you for choosing ${esc(storeName)} &nbsp;·&nbsp; ${esc(WEBSITE)} &nbsp;·&nbsp; ${esc(SERVICES_SITE)}</div>
+    <div class="foot">Thank you for choosing ${esc(storeName)}${
+      website ? ` &nbsp;·&nbsp; ${esc(website)}` : ""
+    }</div>
   </body></html>`;
   printHtml(html);
 }

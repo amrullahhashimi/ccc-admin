@@ -6,6 +6,7 @@ import {
   type Service, type ServiceLine, type Customer, type Product, type Meta,
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useStore } from "../../context/StoreContext";
 import { printInvoice } from "../Utils/Printservice";
 import { printServiceTag } from "../Inventory/printLabel";
 import SignaturePad from "./SignaturePad";
@@ -370,6 +371,7 @@ export default function ServiceNewPage() {
   const isEdit = !!id;
   const navigate = useNavigate();
   const { user, can } = useAuth();
+  const { store } = useStore();
   const [params] = useSearchParams();
   const presetCustomer = params.get("customerId");
 
@@ -598,8 +600,8 @@ export default function ServiceNewPage() {
           )}
           {isEdit && svc && (
             <>
-              <button type="button" onClick={() => printServiceTag(svc)} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print tag</button>
-              <button type="button" onClick={() => printInvoice(svc, { trackUrl: svc.trackToken ? `${window.location.origin}/track/${svc.trackToken}` : undefined })} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print invoice</button>
+              <button type="button" onClick={() => printServiceTag(svc, store)} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print tag</button>
+              <button type="button" onClick={() => printInvoice(svc, { store, trackUrl: svc.trackToken ? `${window.location.origin}/track/${svc.trackToken}` : undefined })} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print invoice</button>
             </>
           )}
           {isEdit && (

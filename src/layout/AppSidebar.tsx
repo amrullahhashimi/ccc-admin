@@ -5,9 +5,12 @@ import {
   BoxCubeIcon,
   ChevronDownIcon,
   GridIcon,
+  HorizontaLDots,
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { useAuth } from "../context/AuthContext";
+import { useStore } from "../context/StoreContext";
 
 type NavItem = {
   name: string;
@@ -54,12 +57,75 @@ const navItems: NavItem[] = [
 }
 ];
 
+const toolsItems: NavItem[] = [
+  {
+    name: "IMEI Checker",
+    path: "/tools/imei",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="6" y="2" width="12" height="20" rx="2" />
+        <path d="M10 18h4" />
+        <path d="M9 6h6" />
+      </svg>
+    ),
+  },
+];
+
+const masterItems: NavItem[] = [
+  {
+    name: "Master",
+    path: "/master",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2 3 7v6c0 5 3.8 8.4 9 9 5.2-.6 9-4 9-9V7z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+];
+
+const storeItems: NavItem[] = [
+  {
+    name: "Store settings",
+    path: "/store",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l1.5-5h15L21 9" />
+        <path d="M4 9v11h16V9" />
+        <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
+      </svg>
+    ),
+  },
+  {
+    name: "Sharing",
+    path: "/store/sharing",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+];
+
+type MenuType = "main" | "tools" | "store";
+
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
+  const { user } = useAuth();
+  const { logo, store } = useStore();
+
+  // The master runs the system rather than a shop, so they get one nav item
+  // and none of the per-store screens.
+  const master = !!user?.superAdmin;
+  const mainNav = master ? [] : navItems;
+  const storeNav = master ? masterItems : storeItems;
 
   const [openSubmenu, setOpenSubmenu] = useState<{
-    type: "main";
+    type: MenuType;
     index: number;
   } | null>(null);
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
@@ -72,16 +138,18 @@ const AppSidebar: React.FC = () => {
 
   useEffect(() => {
     let submenuMatched = false;
-    navItems.forEach((nav, index) => {
-      if (nav.subItems) {
-        nav.subItems.forEach((subItem) => {
-          if (isActive(subItem.path)) {
-            setOpenSubmenu({ type: "main", index });
-            submenuMatched = true;
-          }
+    ([["main", navItems], ["tools", toolsItems], ["store", storeItems]] as [MenuType, NavItem[]][]).forEach(
+      ([type, items]) => {
+        items.forEach((nav, index) => {
+          nav.subItems?.forEach((subItem) => {
+            if (isActive(subItem.path)) {
+              setOpenSubmenu({ type, index });
+              submenuMatched = true;
+            }
+          });
         });
       }
-    });
+    );
 
     if (!submenuMatched) {
       setOpenSubmenu(null);
@@ -100,7 +168,7 @@ const AppSidebar: React.FC = () => {
     }
   }, [openSubmenu]);
 
-  const handleSubmenuToggle = (index: number, menuType: "main") => {
+  const handleSubmenuToggle = (index: number, menuType: MenuType) => {
     setOpenSubmenu((prevOpenSubmenu) => {
       if (
         prevOpenSubmenu &&
@@ -113,7 +181,7 @@ const AppSidebar: React.FC = () => {
     });
   };
 
-  const renderMenuItems = (items: NavItem[], menuType: "main") => (
+  const renderMenuItems = (items: NavItem[], menuType: MenuType) => (
     <ul className="flex flex-col gap-4">
       {items.map((nav, index) => (
         <li key={nav.name}>
@@ -261,15 +329,15 @@ const AppSidebar: React.FC = () => {
             <>
               <img
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="CCC Admin"
+                src={logo("logoLight")}
+                alt={store?.name ?? "CCC Admin"}
                 width={150}
                 height={40}
               />
               <img
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="CCC Admin"
+                src={logo("logoDark")}
+                alt={store?.name ?? "CCC Admin"}
                 width={150}
                 height={40}
               />
@@ -278,15 +346,15 @@ const AppSidebar: React.FC = () => {
             <>
               <img
                 className="dark:hidden"
-                src="/images/logo/logo-icon.svg"
-                alt="CCC"
+                src={logo("iconLight")}
+                alt={store?.name ?? "CCC"}
                 width={32}
                 height={32}
               />
               <img
                 className="hidden dark:block"
-                src="/images/logo/logo-icon-dark.svg"
-                alt="CCC"
+                src={logo("iconDark")}
+                alt={store?.name ?? "CCC"}
                 width={32}
                 height={32}
               />
@@ -298,8 +366,51 @@ const AppSidebar: React.FC = () => {
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
-              {renderMenuItems(navItems, "main")}
+              {renderMenuItems(mainNav, "main")}
             </div>
+
+            <div>
+              <h2
+                className={`mb-4 flex text-xs uppercase leading-[20px] text-gray-400 ${
+                  !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+                }`}
+              >
+                {isExpanded || isHovered || isMobileOpen ? (
+                  "Tools"
+                ) : (
+                  <HorizontaLDots className="size-6" />
+                )}
+              </h2>
+              {renderMenuItems(toolsItems, "tools")}
+            </div>
+              
+              <div>
+              
+                <h2
+              
+                  className={`mb-4 flex text-xs uppercase leading-[20px] text-gray-400 ${
+              
+                    !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+              
+                  }`}
+              
+                >
+              
+                  {isExpanded || isHovered || isMobileOpen ? (
+              
+                    "Store"
+              
+                  ) : (
+              
+                    <HorizontaLDots className="size-6" />
+              
+                  )}
+              
+                </h2>
+              
+                {renderMenuItems(storeNav, "store")}
+              
+              </div>
           </div>
         </nav>
       </div>

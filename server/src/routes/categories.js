@@ -1,4 +1,5 @@
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 
 module.exports = (prisma, requireRole) => {
   const router = express.Router();
@@ -12,7 +13,7 @@ module.exports = (prisma, requireRole) => {
   router.get("/", async (req, res) => {
     try {
       const includeInactive = !!req.query.includeInactive;
-      const where = includeInactive ? {} : { active: true };
+      const where = includeInactive ? { ...scope(req) } : { active: true, ...scope(req) };
 
       const all = await prisma.category.findMany({
         where,
@@ -54,9 +55,9 @@ module.exports = (prisma, requireRole) => {
   });
 
   /** Flat list — handy for dropdowns. */
-  router.get("/flat", async (_req, res) => {
+  router.get("/flat", async (req, res) => {
     const all = await prisma.category.findMany({
-      where: { active: true },
+      where: { active: true, ...scope(req) },
       orderBy: { name: "asc" },
       include: { parent: { select: { id: true, name: true } } },
     });
@@ -79,7 +80,7 @@ module.exports = (prisma, requireRole) => {
       if (!name) return res.status(400).json({ error: "Category name is required." });
 
       if (parentId) {
-        const parent = await prisma.category.findUnique({ where: { id: parentId } });
+        const parent = await prisma.category.findFirst({ where: { id: parentId, ...scope(req) } });
         if (!parent) return res.status(400).json({ error: "That parent category doesn't exist." });
         // Only one level deep — a sub-category can't itself be a parent.
         if (parent.parentId) {
@@ -89,7 +90,7 @@ module.exports = (prisma, requireRole) => {
         }
       }
 
-      const clash = await prisma.category.findFirst({ where: { name, parentId } });
+      const clash = await prisma.category.findFirst({ where: { name, parentId, ...scope(req) } });
       if (clash) {
         return res.status(409).json({
           error: parentId
@@ -98,7 +99,7 @@ module.exports = (prisma, requireRole) => {
         });
       }
 
-      const created = await prisma.category.create({ data: { name, parentId } });
+      const created = await prisma.category.create({ data: { name, parentId, ...stamp(req) } });
       res.status(201).json(created);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -111,7 +112,7 @@ module.exports = (prisma, requireRole) => {
         where: { id: req.params.id },
         include: { _count: { select: { children: true } } },
       });
-      if (!existing) return res.status(404).json({ error: "Category not found." });
+      if (!assertStore(req, res, existing, "category")) return;
 
       const data = {};
 
@@ -134,7 +135,7 @@ module.exports = (prisma, requireRole) => {
               error: `${existing.name} has sub-categories, so it can't become a sub-category itself.`,
             });
           }
-          const parent = await prisma.category.findUnique({ where: { id: parentId } });
+          const parent = await prisma.category.findFirst({ where: { id: parentId, ...scope(req) } });
           if (!parent) return res.status(400).json({ error: "That parent category doesn't exist." });
           if (parent.parentId) {
             return res.status(400).json({
@@ -151,7 +152,7 @@ module.exports = (prisma, requireRole) => {
       const name = data.name ?? existing.name;
       const parentId = data.parentId !== undefined ? data.parentId : existing.parentId;
       const clash = await prisma.category.findFirst({
-        where: { name, parentId, NOT: { id: req.params.id } },
+        where: { name, parentId, NOT: { id: req.params.id }, ...scope(req) },
       });
       if (clash) return res.status(409).json({ error: "Another category already uses that name here." });
 
@@ -169,7 +170,7 @@ module.exports = (prisma, requireRole) => {
         where: { id: req.params.id },
         include: { _count: { select: { products: true, children: true } } },
       });
-      if (!category) return res.status(404).json({ error: "Category not found." });
+      if (!assertStore(req, res, category, "category")) return;
 
       if (category._count.children > 0) {
         return res.status(409).json({

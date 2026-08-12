@@ -80,6 +80,10 @@ app.use("/api/brands", requireLogin, require("./routes/brands")(prisma, requireR
 app.use("/api/meta", requireLogin, require("./routes/meta")(prisma, requireRole));
 app.use("/api/dashboard", requireLogin, require("./routes/dashboard")(prisma));
 app.use("/api/service", requireLogin, require("./routes/service")(prisma, requireRole));
+app.use("/api/stores", requireLogin, require("./routes/stores")(prisma, requireRole));
+app.use("/api/sharing", requireLogin, require("./routes/sharing")(prisma, requireRole));
+app.use("/api/master", requireLogin, require("./routes/master")(prisma));
+app.use("/api/tools", requireLogin, require("./routes/tools")(prisma));
 app.use("/api/track", require("./routes/track")(prisma));
 app.use("/oauth", require("./routes/clover")());
 app.use("/oauth", require("./routes/clover-webhook")(prisma));
@@ -96,6 +100,20 @@ app.get("*", (req, res) => {
   }
   res.sendFile(path.join(clientDir, "index.html"));
 });
+
+/**
+ * Last stop for anything a route threw. Without this, an async handler that
+ * rejects takes the whole API down with an unhandled rejection instead of
+ * answering the request.
+ */
+app.use((err, req, res, _next) => {
+  console.error(`[${req.method} ${req.originalUrl}]`, err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Something went wrong on the server." });
+});
+
+// Anything that still escapes gets logged rather than killing the process.
+process.on("unhandledRejection", (err) => console.error("Unhandled rejection:", err));
 
 app.listen(PORT, () => {
   console.log(`CCC Admin → port ${PORT}`);

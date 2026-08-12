@@ -18,6 +18,12 @@ const OWNER_PASSWORD = process.env.OWNER_PASSWORD || "changeme123";
 const OWNER_NAME = process.env.OWNER_NAME || "Amrullah";
 
 async function main() {
+  // Everything belongs to a store now, so make sure there is one to seed into.
+  const store =
+    (await prisma.store.findFirst({ orderBy: { createdAt: "asc" } })) ||
+    (await prisma.store.create({ data: { name: "Canadian Cellular Communication" } }));
+  console.log(`Store: ${store.name}`);
+
   const existing = await prisma.user.findUnique({ where: { email: OWNER_EMAIL.toLowerCase() } });
   if (existing) {
     console.log(`Owner ${OWNER_EMAIL} already exists — skipping.`);
@@ -28,6 +34,8 @@ async function main() {
         email: OWNER_EMAIL.toLowerCase(),
         role: "OWNER",
         passwordHash: await bcrypt.hash(OWNER_PASSWORD, 12),
+        storeId: store.id,
+        superAdmin: true,
       },
     });
     console.log(`Owner created: ${OWNER_EMAIL}`);
@@ -39,7 +47,11 @@ async function main() {
     { name: "Chinatown", address: "Unit 2, 132 3 Ave SE, Calgary" },
   ];
   for (const loc of locations) {
-    await prisma.location.upsert({ where: { name: loc.name }, update: {}, create: loc });
+    await prisma.location.upsert({
+      where: { storeId_name: { storeId: store.id, name: loc.name } },
+      update: {},
+      create: { ...loc, storeId: store.id },
+    });
   }
   console.log("Locations ready: Glendale, Chinatown");
 
@@ -53,8 +65,8 @@ async function main() {
     "Repair Services",
   ];
   for (const name of categories) {
-    const existing = await prisma.category.findFirst({ where: { name, parentId: null } });
-    if (!existing) await prisma.category.create({ data: { name } });
+    const existing = await prisma.category.findFirst({ where: { name, parentId: null, storeId: store.id } });
+    if (!existing) await prisma.category.create({ data: { name, storeId: store.id } });
   }
   console.log("Categories ready");
 }

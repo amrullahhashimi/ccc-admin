@@ -1,4 +1,15 @@
-import { conditionLabel, type Product, type ProductUnit, type Service } from "../../lib/api";
+import { conditionLabel, type Product, type ProductUnit, type Service, type Store } from "../../lib/api";
+
+/**
+ * Label stock, in millimetres. Comes from Store settings; the fallback is the
+ * 3.5in x 1.125in roll the shop used before settings existed.
+ */
+const DEFAULT_LABEL = { widthMm: 89, heightMm: 29 };
+
+const labelSize = (store?: Store | null) => ({
+  widthMm: store?.labelWidthMm || DEFAULT_LABEL.widthMm,
+  heightMm: store?.labelHeightMm || DEFAULT_LABEL.heightMm,
+});
 
 /**
  * Code format: MMYY + 3 vendor letters + cost.
@@ -33,7 +44,8 @@ function vendorLetters(name: string | null | undefined): string {
  *   2. barcode of the serial, with the serial as text under it
  *   3. the price code
  */
-export function printUnitLabel(product: Product, unit: ProductUnit) {
+export function printUnitLabel(product: Product, unit: ProductUnit, store?: Store | null) {
+  const { widthMm, heightMm } = labelSize(store);
   const topLine = [product.name, unit.storage, conditionLabel(unit.condition), unit.note]
     .filter(Boolean)
     .join(" · ");
@@ -54,10 +66,10 @@ export function printUnitLabel(product: Product, unit: ProductUnit) {
 <title>Label ${escapeHtml(unit.serial)}</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
-    @page { size: 3.5in 1.125in; margin: 0; }
+    @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
     html, body { margin: 0; padding: 0; }
     .label {
-        width: 3.5in; height: 1.125in;
+        width: ${widthMm}mm; height: ${heightMm}mm;
         box-sizing: border-box; padding: 0.05in 0.12in;
         display: flex; flex-direction: column;
         align-items: center; justify-content: space-between;
@@ -126,14 +138,18 @@ function deviceLine(service: Service): string {
 /**
  * Price of the service before GST: parts + labour (the subtotal).
  * GST is added on the invoice / tracking page, not here.
+ *
+ * Labour lines are stored as ticket parts with no product attached, so
+ * `labourCents` is a slice of `parts`, not a separate charge — adding the two
+ * together billed labour twice. Use the server's total, exactly as the invoice
+ * does, and only fall back to summing the lines if it isn't loaded.
  */
 function serviceSubtotalCents(service: Service): number {
-  const partsCents = (service.parts ?? []).reduce(
+  if (typeof service.totalCents === "number") return service.totalCents;
+  return (service.parts ?? []).reduce(
     (sum, p) => sum + (p.priceCents ?? 0) * (p.quantity ?? 1),
     0,
   );
-  const labourCents = service.labourCents ?? 0;
-  return partsCents + labourCents;
 }
 
 /**
@@ -144,7 +160,8 @@ function serviceSubtotalCents(service: Service): number {
  *
  * Leaves printUnitLabel untouched.
  */
-export function printServiceTag(service: Service) {
+export function printServiceTag(service: Service, store?: Store | null) {
+  const { widthMm, heightMm } = labelSize(store);
   const name = customerName(service);
   const phone = customerPhone(service);
   const device = deviceLine(service);
@@ -166,10 +183,10 @@ export function printServiceTag(service: Service) {
 <title>Service ${escapeHtml(numberStr)}</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
-    @page { size: 3.5in 1.125in; margin: 0; }
+    @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
     html, body { margin: 0; padding: 0; }
     .label {
-        width: 3.5in; height: 1.125in;
+        width: ${widthMm}mm; height: ${heightMm}mm;
         box-sizing: border-box; padding: 0.05in 6px 0.05in 3px;
         display: flex; gap: 6px;
         font-family: Arial, Helvetica, sans-serif;

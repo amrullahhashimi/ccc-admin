@@ -13,6 +13,11 @@ export interface User {
   email: string;
   role: Role;
   active?: boolean;
+  /** Which shop this account belongs to — every query is filtered by it. */
+  storeId?: string;
+  storeName?: string | null;
+  /** Can create and manage stores across the whole system. */
+  superAdmin?: boolean;
 }
 
 export interface Vendor {
@@ -512,6 +517,273 @@ export const money = (cents?: number | null) =>
 
 export const conditionLabel = (value: string) =>
   CONDITIONS.find((c) => c.value === value)?.label ?? value;
+
+/* ------------------------------ stores ------------------------------ */
+
+export interface Store {
+  id: string;
+  name: string;
+  logoLight?: string | null;
+  logoDark?: string | null;
+  iconLight?: string | null;
+  iconDark?: string | null;
+  authLogo?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  serviceTerms?: string | null;
+  labelWidthMm: number;
+  labelHeightMm: number;
+  active: boolean;
+  createdAt: string;
+}
+
+/** One upload slot: where the logo appears and what size it should be. */
+export interface LogoSlot {
+  label: string;
+  use: string;
+  width: number;
+  height: number;
+  maxKb: number;
+}
+
+export const stores = {
+  settings: () => request<Store>("/api/stores/settings"),
+  logoSlots: () => request<Record<string, LogoSlot>>("/api/stores/logo-slots"),
+  saveSettings: (data: Record<string, unknown>) =>
+    request<Store>("/api/stores/settings", { method: "PATCH", ...body(data) }),
+};
+
+/* ----------------------------- sharing ----------------------------- */
+
+/** Which fields can be shared, as the server defines them. */
+export type ShareCatalogue = Record<
+  string,
+  { label: string; fields: Record<string, string> }
+>;
+
+/** Ticked fields, grouped: { inventory: { salePrice: true }, … } */
+export type SharePermissions = Record<string, Record<string, boolean>>;
+
+export interface Share {
+  id: string;
+  ownerStoreId: string;
+  viewerStoreId: string;
+  permissions: SharePermissions;
+  createdAt: string;
+  updatedAt: string;
+  viewerStore?: { id: string; name: string };
+  ownerStore?: { id: string; name: string; phone?: string | null; website?: string | null };
+}
+
+/** A store that has shared something with us, and what they opened up. */
+export interface ReceivedShare {
+  store: { id: string; name: string; phone?: string | null; website?: string | null };
+  permissions: SharePermissions;
+}
+
+/** Rows come back with only the granted fields present — the rest are absent. */
+export type SharedRow = Record<string, unknown> & { id: string };
+
+export const sharing = {
+  catalogue: () => request<ShareCatalogue>("/api/sharing/catalogue"),
+  list: () => request<{ outgoing: Share[]; incoming: Share[] }>("/api/sharing"),
+  /** Find a store by a staff email. 404 when there's no match. */
+  lookup: (email: string) =>
+    request<{
+      store: { id: string; name: string };
+      existing: { id: string; permissions: SharePermissions } | null;
+    }>("/api/sharing/lookup", { method: "POST", ...body({ email }) }),
+  save: (storeId: string, permissions: SharePermissions) =>
+    request<Share>("/api/sharing", { method: "PUT", ...body({ storeId, permissions }) }),
+  revoke: (id: string) => request<{ ok: true }>(`/api/sharing/${id}`, { method: "DELETE" }),
+
+  received: () => request<ReceivedShare[]>("/api/sharing/received"),
+  inventory: (storeId: string, q?: string) =>
+    request<SharedRow[]>(
+      `/api/sharing/${storeId}/inventory${q ? `?q=${encodeURIComponent(q)}` : ""}`
+    ),
+  customers: (storeId: string) => request<SharedRow[]>(`/api/sharing/${storeId}/customers`),
+  service: (storeId: string) => request<SharedRow[]>(`/api/sharing/${storeId}/service`),
+};
+
+/* ------------------------------ master ------------------------------ */
+
+export interface MasterStore extends Store {
+  _count?: {
+    users: number;
+    products: number;
+    customers: number;
+    tickets: number;
+    sales: number;
+  };
+}
+
+export interface StoreCounts {
+  users: number;
+  products: number;
+  customers: number;
+  tickets: number;
+  openTickets: number;
+  sales: number;
+}
+
+export interface MasterProduct {
+  id: string;
+  name: string;
+  sku: string;
+  brand: string | null;
+  category: string | null;
+  vendor: string | null;
+  costCents: number;
+  salePriceCents: number;
+  active: boolean;
+  quantity: number;
+  inStockSerials: number;
+}
+
+export interface MasterCustomer {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+  company?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  createdAt: string;
+  _count?: { sales: number; tickets: number };
+}
+
+export interface MasterTicket {
+  id: string;
+  number: number;
+  status: string;
+  deviceMake?: string | null;
+  deviceModel?: string | null;
+  deviceImei?: string | null;
+  issue: string;
+  estimateCents: number;
+  labourCents: number;
+  createdAt: string;
+  completedAt?: string | null;
+  customer?: { firstName: string; lastName?: string | null; phone?: string | null } | null;
+  technician?: { name: string } | null;
+}
+
+/**
+ * System administration. Every read here is look-only — there are no update or
+ * delete endpoints for a store's records, by design.
+ */
+export const master = {
+  stores: () => request<MasterStore[]>("/api/master/stores"),
+  store: (id: string) => request<{ store: Store; counts: StoreCounts }>(`/api/master/stores/${id}`),
+  createStore: (data: { name: string; ownerName: string; ownerEmail: string; password: string }) =>
+    request<{ store: Store; owner: User }>("/api/master/stores", { method: "POST", ...body(data) }),
+  updateStore: (id: string, data: { name?: string; active?: boolean }) =>
+    request<Store>(`/api/master/stores/${id}`, { method: "PATCH", ...body(data) }),
+
+  inventory: (id: string, q?: string) =>
+    request<MasterProduct[]>(
+      `/api/master/stores/${id}/inventory${q ? `?q=${encodeURIComponent(q)}` : ""}`
+    ),
+  customers: (id: string, q?: string) =>
+    request<MasterCustomer[]>(
+      `/api/master/stores/${id}/customers${q ? `?q=${encodeURIComponent(q)}` : ""}`
+    ),
+  tickets: (id: string, q?: string) =>
+    request<MasterTicket[]>(
+      `/api/master/stores/${id}/tickets${q ? `?q=${encodeURIComponent(q)}` : ""}`
+    ),
+
+  users: (id: string) => request<User[]>(`/api/master/stores/${id}/users`),
+  createUser: (id: string, data: { name: string; email: string; password: string; role: Role }) =>
+    request<User>(`/api/master/stores/${id}/users`, { method: "POST", ...body(data) }),
+  updateUser: (userId: string, data: { active?: boolean; role?: Role; password?: string }) =>
+    request<User>(`/api/master/users/${userId}`, { method: "PATCH", ...body(data) }),
+};
+
+/* ------------------------------ tools ------------------------------ */
+
+/** What the bundled TAC database knows about the device. */
+export interface ImeiDevice {
+  brand: string | null;
+  model: string | null;
+  details: string | null;
+  year: number | null;
+  /** The network this variant was built for — not whether it's locked now. */
+  carrierVariant: string | null;
+  region: string | null;
+  dualSim: boolean | null;
+}
+
+export interface ImeiInsights {
+  carrier: { variant: string | null; region: string | null; dualSim: boolean | null } | null;
+  warranty: {
+    /** Our own warranty, when this is a unit we sold. */
+    ours: {
+      months: number;
+      from: string;
+      expires: string;
+      expired: boolean;
+      basis: string;
+    } | null;
+    manufacturer: { verdict: "expired" | "possible" | "unknown"; note: string };
+  };
+}
+
+/** What we already know about this handset from our own books. */
+export interface ImeiRecords {
+  unit: {
+    id: string;
+    serial: string;
+    status: string;
+    condition: string;
+    storage: string | null;
+    color: string | null;
+    warrantyMonths: number;
+    stockedAt: string;
+    updatedAt: string;
+    product: { id: string; name: string; sku: string } | null;
+    location: string | null;
+    vendor: string | null;
+  } | null;
+  tickets: {
+    id: string;
+    number: number;
+    status: string;
+    issue: string;
+    warranty: boolean;
+    at: string;
+    completedAt: string | null;
+    customer: string | null;
+  }[];
+}
+
+export interface ImeiCheck {
+  input: string;
+  imei: string;
+  length: number;
+  kind: string | null;
+  valid: boolean | null;
+  checkDigit: number | null;
+  expectedCheckDigit: number | null;
+  tac: string | null;
+  serialNumber: string | null;
+  softwareVersion: string | null;
+  reportingBodyCode: string | null;
+  reportingBody: string | null;
+  full: string | null;
+  device: ImeiDevice | null;
+  insights: ImeiInsights;
+  records: ImeiRecords;
+}
+
+export const tools = {
+  /** How many devices the bundled TAC database knows about. */
+  imeiConfig: () => request<{ tacEntries: number }>("/api/tools/imei/config"),
+  checkImei: (imei: string) =>
+    request<ImeiCheck>("/api/tools/imei", { method: "POST", ...body({ imei }) }),
+};
 
 export const service = {
   list: (params: { q?: string; status?: string; customerId?: string } = {}) => {

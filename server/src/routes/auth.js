@@ -13,16 +13,30 @@ module.exports = (prisma) => {
 
     const user = await prisma.user.findUnique({
       where: { email: String(email).toLowerCase().trim() },
+      include: { store: { select: { id: true, name: true, active: true } } },
     });
 
     const bad = () => res.status(401).json({ error: "Email or password is incorrect." });
     if (!user || !user.active) return bad();
+    // The master belongs to no store; everyone else needs theirs switched on.
+    if (user.storeId && !user.store?.active) {
+      return res.status(403).json({ error: "This store has been switched off. Contact your administrator." });
+    }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return bad();
 
     const now = Date.now();
-    req.session.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+    // storeId rides in the session — every query below the API layer filters on it.
+    req.session.user = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      storeId: user.storeId,
+      storeName: user.store?.name ?? null,
+      superAdmin: user.superAdmin,
+    };
     req.session.hasPin = !!user.pinHash;
     req.session.cookie.maxAge = SHIFT_MS;
 

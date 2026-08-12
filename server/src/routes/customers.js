@@ -1,4 +1,5 @@
 const express = require("express");
+const { scope, stamp, assertStore } = require("../tenancy");
 
 function shape(body) {
   const d = {};
@@ -38,6 +39,7 @@ module.exports = (prisma, requireRole) => {
           ],
         }
       : {};
+    Object.assign(where, scope(req));
 
     const customers = await prisma.customer.findMany({
       where,
@@ -51,8 +53,8 @@ module.exports = (prisma, requireRole) => {
   });
 
   router.get("/:id", async (req, res) => {
-    const c = await prisma.customer.findUnique({
-      where: { id: req.params.id },
+    const c = await prisma.customer.findFirst({
+      where: { id: req.params.id, ...scope(req) },
       include: {
         sales: { orderBy: { createdAt: "desc" }, take: 20 },
         tickets: { orderBy: { createdAt: "desc" }, take: 20 },
@@ -70,7 +72,7 @@ module.exports = (prisma, requireRole) => {
       if (!data.phone && !data.email) {
         return res.status(400).json({ error: "Add a phone number or an email so you can reach them." });
       }
-      const created = await prisma.customer.create({ data });
+      const created = await prisma.customer.create({ data: { ...data, ...stamp(req) } });
       res.status(201).json(created);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -79,6 +81,9 @@ module.exports = (prisma, requireRole) => {
 
   router.patch("/:id", async (req, res) => {
     try {
+      const own = await prisma.customer.findUnique({ where: { id: req.params.id }, select: { storeId: true } });
+      if (!assertStore(req, res, own, "customer")) return;
+
       const updated = await prisma.customer.update({
         where: { id: req.params.id },
         data: shape(req.body),
@@ -96,7 +101,7 @@ module.exports = (prisma, requireRole) => {
         where: { id: req.params.id },
         include: { _count: { select: { sales: true, tickets: true, layaways: true } } },
       });
-      if (!counts) return res.status(404).json({ error: "Customer not found." });
+      if (!assertStore(req, res, counts, "customer")) return;
       const { sales, tickets, layaways } = counts._count;
       if (sales || tickets || layaways) {
         return res.status(409).json({

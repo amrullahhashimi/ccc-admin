@@ -9,6 +9,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/* ------------------------------ stores ------------------------------ */
+
+/// One shop. Every record below belongs to exactly one, and nothing crosses
+/// between them unless the store has explicitly shared it (see StoreShare).
+model Store {
+  id   String @id @default(cuid())
+  name String
+
+  // Branding. Each is a data: URL, so there's no file store to run.
+  // See LOGO_SLOTS in routes/stores.js for where each one is shown.
+  logoLight String? @db.LongText // full logo, light background
+  logoDark  String? @db.LongText // full logo, dark background
+  iconLight String? @db.LongText // square mark, collapsed sidebar, light
+  iconDark  String? @db.LongText // square mark, collapsed sidebar, dark
+  authLogo  String? @db.LongText // sign-in screen
+
+  address String? @db.Text
+  phone   String?
+  website String?
+
+  /// Printed at the bottom of service intake and collection paperwork.
+  serviceTerms String? @db.Text
+
+  // Label stock this store prints on.
+  labelWidthMm  Int @default(50)
+  labelHeightMm Int @default(25)
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  users      User[]
+  locations  Location[]
+  categories Category[]
+  vendors    Vendor[]
+  brands     Brand[]
+  products   Product[]
+  units      ProductUnit[]
+  customers  Customer[]
+  tickets    Ticket[]
+  sales      Sale[]
+  layaways   Layaway[]
+  invoices   Invoice[]
+
+  sharesGranted  StoreShare[] @relation("SharingStore")
+  sharesReceived StoreShare[] @relation("ViewingStore")
+}
+
+/// A one-way, read-only window from one store into another's records.
+///
+/// The store that owns the data creates the row: they look the other shop up by
+/// a staff email, then tick exactly which fields to hand over. Nothing is
+/// visible that isn't ticked, and the grant can be withdrawn at any time.
+model StoreShare {
+  id String @id @default(cuid())
+
+  /// Whose data is being shared.
+  ownerStoreId String
+  ownerStore   Store  @relation("SharingStore", fields: [ownerStoreId], references: [id], onDelete: Cascade)
+
+  /// Who gets to look at it.
+  viewerStoreId String
+  viewerStore   Store  @relation("ViewingStore", fields: [viewerStoreId], references: [id], onDelete: Cascade)
+
+  /// Field-by-field grants — see PERMISSIONS in routes/sharing.js for the shape.
+  /// Anything missing counts as "not shared".
+  permissions Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([ownerStoreId, viewerStoreId])
+  @@index([viewerStoreId])
+}
+
 /* ------------------------------ staff ------------------------------ */
 
 model User {
@@ -20,20 +95,36 @@ model User {
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   pinHash String?
-  
+
+  /// The master account: runs the whole system and belongs to no store.
+  /// Sees every store read-only and creates their staff, but owns no data.
+  superAdmin Boolean @default(false)
+
+  /// Null only for the master — everyone else works inside exactly one store.
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
   sales           Sale[]
   ticketsAssigned Ticket[] @relation("Technician")
+
+  @@index([storeId])
 }
 
 model Location {
   id      String  @id @default(cuid())
-  name    String  @unique
+  name    String
   address String? @db.Text
   active  Boolean @default(true)
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   units ProductUnit[]
   sales    Sale[]
   tickets  Ticket[]
+
+  @@unique([storeId, name])
+  @@index([storeId])
 }
 
 /* ---------------------------- inventory ---------------------------- */
@@ -51,14 +142,18 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   products Product[]
 
   @@index([parentId])
+  @@index([storeId])
 }
 
 model Vendor {
   id   String @id @default(cuid())
-  name String @unique
+  name String
 
   accountNumber String? // your account number with them
   contactPerson String?
@@ -85,14 +180,20 @@ model Vendor {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   products Product[]
   stockEntries StockEntry[]
   units ProductUnit[]
+
+  @@unique([storeId, name])
+  @@index([storeId])
 }
 
 model Brand {
   id   String @id @default(cuid())
-  name String @unique
+  name String
 
   notes  String? @db.Text
   active Boolean @default(true)
@@ -100,14 +201,20 @@ model Brand {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   products Product[]
+
+  @@unique([storeId, name])
+  @@index([storeId])
 }
 
 model Product {
   id   String @id @default(cuid())
   name String
 
-  sku       String  @unique
+  sku       String
   upc       String?
   ean       String?
   customSku String?
@@ -133,14 +240,19 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   units        ProductUnit[]
   stockEntries StockEntry[]
   saleItems    SaleItem[]
   layawayItems LayawayItem[]
   ticketParts  TicketPart[]
 
+  @@unique([storeId, sku])
   @@index([name])
   @@index([upc])
+  @@index([storeId])
 
   tracksSerials Boolean @default(true)
 }
@@ -152,7 +264,7 @@ model ProductUnit {
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  serial    String  @unique
+  serial    String
   condition String // NEW | OPEN_BOX | USED_LIKE_NEW | USED_GOOD | USED_FAIR | FOR_PARTS
   storage   String?
   color     String?
@@ -170,8 +282,13 @@ model ProductUnit {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, serial])
   @@index([productId])
   @@index([status])
+  @@index([storeId])
 }
 
 /// A batch of stock coming in — the quantity on hand is the sum of these.
@@ -213,19 +330,23 @@ model Customer {
   mobile         String?
   contactConsent Boolean @default(false)
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   sales    Sale[]
   tickets  Ticket[]
   layaways Layaway[]
 
   @@index([phone])
   @@index([lastName])
+  @@index([storeId])
 }
 
 /* -------------------------- service tickets -------------------------- */
 
 model Ticket {
   id     String @id @default(cuid())
-  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+  number Int // assigned in code (max + 1 within the store)
 
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
@@ -259,6 +380,9 @@ model Ticket {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   parts TicketPart[]
   sale  Sale?
 
@@ -266,6 +390,9 @@ model Ticket {
 
   signatureData String?   @db.Text
   signedAt      DateTime?
+
+  @@unique([storeId, number])
+  @@index([storeId])
 }
 
 model TicketPart {
@@ -283,7 +410,7 @@ model TicketPart {
 
 model Sale {
   id     String @id @default(cuid())
-  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+  number Int // assigned in code (max + 1 within the store)
 
   customerId String?
   customer   Customer? @relation(fields: [customerId], references: [id])
@@ -306,9 +433,15 @@ model Sale {
 
   createdAt DateTime @default(now())
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   items    SaleItem[]
   payments Payment[]
   invoice  Invoice?
+
+  @@unique([storeId, number])
+  @@index([storeId])
 }
 
 model SaleItem {
@@ -341,7 +474,7 @@ model Payment {
 
 model Layaway {
   id     String @id @default(cuid())
-  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+  number Int // assigned in code (max + 1 within the store)
 
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
@@ -354,8 +487,14 @@ model Layaway {
   notes     String? @db.Text
   createdAt DateTime  @default(now())
 
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
   items    LayawayItem[]
   payments Payment[]
+
+  @@unique([storeId, number])
+  @@index([storeId])
 }
 
 model LayawayItem {
@@ -373,11 +512,17 @@ model LayawayItem {
 
 model Invoice {
   id     String @id @default(cuid())
-  number Int    @unique // assigned in code (max + 1) — SQLite only autoincrements the id
+  number Int // assigned in code (max + 1 within the store)
   saleId String @unique
   sale   Sale   @relation(fields: [saleId], references: [id])
 
   sentTo    String?
   sentAt    DateTime?
   createdAt DateTime  @default(now())
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, number])
+  @@index([storeId])
 }

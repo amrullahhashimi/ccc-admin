@@ -1,9 +1,10 @@
 const express = require("express");
+const { scope } = require("../tenancy");
 
 module.exports = (prisma) => {
   const router = express.Router();
 
-  router.get("/", async (_req, res) => {
+  router.get("/", async (req, res) => {
     try {
       const [products, customers, vendorCount, brandCount, locations] = await Promise.all([
         prisma.product.findMany({
@@ -15,10 +16,10 @@ module.exports = (prisma) => {
             brand: { select: { name: true } },
           },
         }),
-        prisma.customer.count(),
-        prisma.vendor.count({ where: { active: true } }),
-        prisma.brand.count({ where: { active: true } }),
-        prisma.location.findMany({ where: { active: true }, select: { id: true, name: true } }),
+        prisma.customer.count({ where: scope(req) }),
+        prisma.vendor.count({ where: { active: true, ...scope(req) } }),
+        prisma.brand.count({ where: { active: true, ...scope(req) } }),
+        prisma.location.findMany({ where: { active: true, ...scope(req) }, select: { id: true, name: true } }),
       ]);
 
       const qtyOf = (p) => (p.stockEntries ?? []).reduce((s, e) => s + e.quantity, 0);

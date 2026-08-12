@@ -12,6 +12,8 @@ module.exports = (prisma) => {
         include: {
           customer: { select: { firstName: true } },
           location: { select: { name: true } },
+          // The customer should see the shop they actually dealt with.
+          store: { select: { name: true, logoLight: true, phone: true, website: true, address: true } },
           parts: { select: { name: true, productId: true, quantity: true, priceCents: true }, orderBy: { id: "asc" } },
         },
       });
@@ -31,6 +33,16 @@ module.exports = (prisma) => {
       const totalCents = subtotalCents + gstCents;
 
       res.json({
+        // Branding for the shop the customer actually dealt with.
+        store: t.store
+          ? {
+              name: t.store.name,
+              logo: t.store.logoLight,
+              phone: t.store.phone,
+              website: t.store.website,
+              address: t.store.address,
+            }
+          : null,
         number: t.number,
         status: t.status,
         deviceMake: t.deviceMake,

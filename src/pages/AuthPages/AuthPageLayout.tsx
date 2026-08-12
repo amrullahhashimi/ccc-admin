@@ -1,3 +1,4 @@
+import { useStore } from "../../context/StoreContext";
 import React from "react";
 import GridShape from "../../components/common/GridShape";
 
@@ -6,6 +7,7 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { logo, branding } = useStore();
   return (
     <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
       <div className="relative flex flex-col justify-center w-full h-screen lg:flex-row dark:bg-gray-900 sm:p-0">
@@ -18,8 +20,8 @@ export default function AuthLayout({
                 <img
                   width={231}
                   height={48}
-                  src="/images/logo/auth-logo.svg"
-                  alt="Logo"
+                  src={logo("authLogo")}
+                  alt={branding.name ?? "Logo"}
                 />
             </div>
           </div>
