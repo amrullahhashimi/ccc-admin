@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "cd server && node src/server.js"
+    "start": "cd server && npx prisma migrate deploy && node src/server.js"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",

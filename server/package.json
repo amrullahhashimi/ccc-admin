@@ -8,7 +8,9 @@
     "dev": "node --watch src/server.js",
     "migrate": "prisma migrate dev --name init",
     "seed": "node prisma/seed.js",
-    "studio": "prisma studio"
+    "studio": "prisma studio",
+    "postinstall": "prisma generate",
+    "migrate:deploy": "prisma migrate deploy"
   },
   "engines": {
     "node": ">=18"
