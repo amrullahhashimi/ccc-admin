@@ -4,9 +4,7 @@ import type { FC } from "react";
 interface InputProps {
   type?: "text" | "number" | "email" | "password" | "date" | "time" | string;
   id?: string;
-  name?: string;
-  placeholder?: string;
-  value?: string | number;
+  name?: string;  value?: string | number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   className?: string;
   min?: string;
@@ -21,9 +19,7 @@ interface InputProps {
 const Input: FC<InputProps> = ({
   type = "text",
   id,
-  name,
-  placeholder,
-  value,
+  name,  value,
   onChange,
   className = "",
   min,
@@ -52,7 +48,6 @@ const Input: FC<InputProps> = ({
         type={type}
         id={id}
         name={name}
-        placeholder={placeholder}
         value={value}
         onChange={onChange}
         min={min}

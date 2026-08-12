@@ -89,7 +89,6 @@ function TimePicker({ value, stepOptions, onChange }: { value: string; stepOptio
       <input
         className={inputClass + " pr-9 cursor-pointer"}
         value={display}
-        placeholder="--:--"
         readOnly
         onFocus={() => setOpen(true)}
         onClick={() => setOpen(true)}
@@ -179,7 +178,7 @@ function LinesPanel({ svc, onChanged }: { svc: Service; onChanged: () => void })
         {tab === "part" ? (
           <div className="space-y-3">
             <div className="relative">
-              <input className={inputClass} placeholder="Search inventory…" value={productQuery} onChange={(e) => { setProductQuery(e.target.value); setProductId(""); }} />
+              <input className={inputClass} value={productQuery} onChange={(e) => { setProductQuery(e.target.value); setProductId(""); }} />
               {results.length > 0 && !productId && (
                 <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
                   {results.map((p) => (
@@ -261,7 +260,6 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
       <input
         className={inputClass + " pr-9 cursor-pointer"}
         value={label}
-        placeholder="YYYY-MM-DD"
         readOnly
         onFocus={() => setOpen(true)}
         onClick={() => setOpen(true)}
@@ -316,7 +314,7 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 // Custom select styled like the time/date pickers: field + chevron + styled list.
-function SelectPicker({ value, options, placeholder, onChange }: { value: string; options: { value: string; label: string }[]; placeholder?: string; onChange: (v: string) => void }) {
+function SelectPicker({ value, options, onChange }: { value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -334,7 +332,6 @@ function SelectPicker({ value, options, placeholder, onChange }: { value: string
       <input
         className={inputClass + " pr-9 cursor-pointer"}
         value={current?.label ?? ""}
-        placeholder={placeholder ?? "Select…"}
         readOnly
         onFocus={() => setOpen(true)}
         onClick={() => setOpen(true)}
@@ -643,7 +640,7 @@ export default function ServiceNewPage() {
 
             {isEdit && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <div><label className={labelClass}>Location</label><SelectPicker value={form.locationId} placeholder="—" options={[{ value: "", label: "—" }, ...(meta?.locations ?? []).map((l) => ({ value: l.id, label: l.name }))]} onChange={(v) => { setF("locationId", v); if (id) serviceApi.update(id, { locationId: v }).then(load); }} /></div>
+                <div><label className={labelClass}>Location</label><SelectPicker value={form.locationId} options={[{ value: "", label: "—" }, ...(meta?.locations ?? []).map((l) => ({ value: l.id, label: l.name }))]} onChange={(v) => { setF("locationId", v); if (id) serviceApi.update(id, { locationId: v }).then(load); }} /></div>
                 <div><label className={labelClass}>Deposit taken</label><input type="number" step="0.01" className={inputClass} value={form.deposit} onChange={(e) => setF("deposit", e.target.value)} /></div>
               </div>
             )}

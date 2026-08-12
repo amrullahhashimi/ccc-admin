@@ -103,7 +103,7 @@ function InventoryTab({
               <label className={labelClass}>
                 Quantity <span className="text-error-500">*</span>
               </label>
-              <input type="number" className={inputClass} value={form.quantity} onChange={(e) => set("quantity", e.target.value)} placeholder="20" autoFocus />
+              <input type="number" className={inputClass} value={form.quantity} onChange={(e) => set("quantity", e.target.value)} autoFocus />
             </div>
             <div>
               <label className={labelClass}>Cost price</label>
@@ -120,7 +120,7 @@ function InventoryTab({
             </div>
             <div>
               <label className={labelClass}>Note</label>
-              <input className={inputClass} value={form.note} onChange={(e) => set("note", e.target.value)} placeholder="PO number, shipment…" />
+              <input className={inputClass} value={form.note} onChange={(e) => set("note", e.target.value)} />
             </div>
           </div>
 
@@ -432,7 +432,7 @@ function SerialsTab({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <label className={labelClass}>Serial <span className="text-error-500">*</span></label>
-              <input className={inputClass} value={form.serial} onChange={(e) => set("serial", e.target.value)} placeholder="Scan or type the IMEI/serial" autoFocus />
+              <input className={inputClass} value={form.serial} onChange={(e) => set("serial", e.target.value)} autoFocus />
             </div>
             <div>
               <label className={labelClass}>Condition <span className="text-error-500">*</span></label>
@@ -472,19 +472,19 @@ function SerialsTab({
             </div>
             <div>
               <label className={labelClass}>Label cost</label>
-              <input type="number" step="0.01" className={inputClass} value={form.labelCost} onChange={(e) => set("labelCost", e.target.value)} placeholder="Price for the tag" />
+              <input type="number" step="0.01" className={inputClass} value={form.labelCost} onChange={(e) => set("labelCost", e.target.value)} />
             </div>
             <div>
               <label className={labelClass}>Storage</label>
-              <input className={inputClass} value={form.storage} onChange={(e) => set("storage", e.target.value)} placeholder="64GB" />
+              <input className={inputClass} value={form.storage} onChange={(e) => set("storage", e.target.value)} />
             </div>
             <div>
               <label className={labelClass}>Colour</label>
-              <input className={inputClass} value={form.color} onChange={(e) => set("color", e.target.value)} placeholder="Blue" />
+              <input className={inputClass} value={form.color} onChange={(e) => set("color", e.target.value)} />
             </div>
             <div className="sm:col-span-2 lg:col-span-3">
               <label className={labelClass}>Note</label>
-              <input className={inputClass} value={form.note} onChange={(e) => set("note", e.target.value)} placeholder="e.g. Battery health 89%" />
+              <input className={inputClass} value={form.note} onChange={(e) => set("note", e.target.value)} />
             </div>
           </div>
 

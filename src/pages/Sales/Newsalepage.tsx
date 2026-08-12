@@ -334,7 +334,7 @@ export default function NewSalePage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <input className={inputClass} value={custQuery} onChange={(e) => setCustQuery(e.target.value)} placeholder="Search customers by name or phone…" />
+                  <input className={inputClass} value={custQuery} onChange={(e) => setCustQuery(e.target.value)} />
                   {custMatches.length > 0 && (
                     <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
                       {custMatches.slice(0, 6).map((c) => (
@@ -358,7 +358,7 @@ export default function NewSalePage() {
             </div>
             <div className="space-y-4 p-6">
               <div className="relative">
-                <input className={inputClass} value={prodQuery} onChange={(e) => setProdQuery(e.target.value)} placeholder="Search products by name, SKU, or serial…" />
+                <input className={inputClass} value={prodQuery} onChange={(e) => setProdQuery(e.target.value)} />
                 {prodResults.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:divide-gray-800 dark:border-gray-700 dark:bg-gray-900">
                     {prodResults.slice(0, 8).map((p) => (
@@ -442,7 +442,7 @@ export default function NewSalePage() {
                   <select value={p.method} onChange={(e) => updatePayRow(p.key, { method: e.target.value })} className="h-10 rounded-md border border-gray-300 bg-transparent px-2 text-sm dark:border-gray-700 dark:bg-gray-900">
                     {PAY_METHODS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
                   </select>
-                  <input type="number" step="0.01" value={p.amount} onChange={(e) => updatePayRow(p.key, { amount: e.target.value })} placeholder="0.00" className="h-10 w-full rounded-md border border-gray-300 bg-transparent px-2 text-sm dark:border-gray-700" />
+                  <input type="number" step="0.01" value={p.amount} onChange={(e) => updatePayRow(p.key, { amount: e.target.value })} className="h-10 w-full rounded-md border border-gray-300 bg-transparent px-2 text-sm dark:border-gray-700" />
                   <button onClick={() => fillBalance(p.key)} title="Fill remaining balance" className="shrink-0 rounded-md border border-gray-300 px-2 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400">Bal</button>
                   {pays.length > 1 && <button onClick={() => removePayRow(p.key)} className="shrink-0 text-error-500" aria-label="Remove payment">×</button>}
                 </div>

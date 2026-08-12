@@ -94,7 +94,6 @@ export default function SignUpForm() {
                       type="text"
                       id="fname"
                       name="fname"
-                      placeholder="Enter your first name"
                     />
                   </div>
                   {/* <!-- Last Name --> */}
@@ -106,7 +105,6 @@ export default function SignUpForm() {
                       type="text"
                       id="lname"
                       name="lname"
-                      placeholder="Enter your last name"
                     />
                   </div>
                 </div>
@@ -119,7 +117,6 @@ export default function SignUpForm() {
                     type="email"
                     id="email"
                     name="email"
-                    placeholder="Enter your email"
                   />
                 </div>
                 {/* <!-- Password --> */}
@@ -129,7 +126,6 @@ export default function SignUpForm() {
                   </Label>
                   <div className="relative">
                     <Input
-                      placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
                     />
                     <span

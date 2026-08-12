@@ -171,13 +171,6 @@ export default function StoreDetail({ store, onBack }: { store: Store; onBack: (
           className={inputClass}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder={
-            tab === "inventory"
-              ? "Search items, SKUs, serials…"
-              : tab === "service"
-              ? "Search tickets, devices, customers…"
-              : "Search customers…"
-          }
         />
       )}
 
@@ -381,7 +374,6 @@ export default function StoreDetail({ store, onBack }: { store: Store; onBack: (
                     className={inputClass}
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    placeholder="At least 8 characters"
                   />
                 </div>
                 <div className="sm:col-span-2">

@@ -1,8 +1,6 @@
 import React from "react";
 
-interface TextareaProps {
-  placeholder?: string; // Placeholder text
-  rows?: number; // Number of rows
+interface TextareaProps {  rows?: number; // Number of rows
   value?: string; // Current value
   onChange?: (value: string) => void; // Change handler
   className?: string; // Additional CSS classes
@@ -11,9 +9,7 @@ interface TextareaProps {
   hint?: string; // Hint text to display
 }
 
-const TextArea: React.FC<TextareaProps> = ({
-  placeholder = "Enter your message", // Default placeholder
-  rows = 3, // Default number of rows
+const TextArea: React.FC<TextareaProps> = ({  rows = 3, // Default number of rows
   value = "", // Default value
   onChange, // Callback for changes
   className = "", // Additional custom styles
@@ -40,7 +36,6 @@ const TextArea: React.FC<TextareaProps> = ({
   return (
     <div className="relative">
       <textarea
-        placeholder={placeholder}
         rows={rows}
         value={value}
         onChange={handleChange}

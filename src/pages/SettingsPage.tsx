@@ -62,7 +62,6 @@ function PinCard() {
               className={inputClass}
               value={pin}
               onChange={(e) => setPin(onlyDigits(e.target.value))}
-              placeholder="••••"
               autoComplete="off"
             />
           </div>
@@ -74,7 +73,6 @@ function PinCard() {
               className={inputClass}
               value={confirm}
               onChange={(e) => setConfirm(onlyDigits(e.target.value))}
-              placeholder="••••"
               autoComplete="off"
             />
           </div>

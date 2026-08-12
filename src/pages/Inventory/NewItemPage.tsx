@@ -79,7 +79,6 @@ export default function NewItemPage() {
               className={inputClass}
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
-              placeholder="Samsung Galaxy A20"
               autoFocus
             />
           </div>
@@ -90,7 +89,6 @@ export default function NewItemPage() {
               className={inputClass}
               value={form.sku}
               onChange={(e) => set("sku", e.target.value)}
-              placeholder="Leave blank to generate"
             />
           </div>
           <div>
@@ -137,16 +135,16 @@ export default function NewItemPage() {
 
           <div>
             <label className={labelClass}>Cost price</label>
-            <input type="number" step="0.01" className={inputClass} value={form.cost} onChange={(e) => set("cost", e.target.value)} placeholder="0.00" />
+            <input type="number" step="0.01" className={inputClass} value={form.cost} onChange={(e) => set("cost", e.target.value)} />
           </div>
           <div>
             <label className={labelClass}>Online price</label>
-            <input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} placeholder="0.00" />
+            <input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} />
           </div>
           <div className="sm:col-span-2 flex flex-wrap items-end gap-6">
             <div className="min-w-[10rem] flex-1">
               <label className={labelClass}>Sale price</label>
-              <input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} placeholder="0.00" />
+              <input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} />
             </div>
             <label className="flex cursor-pointer items-center gap-2 pb-3 text-sm text-gray-700 dark:text-gray-400">
               <input

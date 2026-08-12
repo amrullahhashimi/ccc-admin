@@ -184,7 +184,6 @@ function CustomerForm({
               className={`${inputClass} h-auto`}
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
-              placeholder="Anything worth remembering — devices they own, preferences…"
             />
           </div>
         </div>
@@ -287,7 +286,6 @@ export default function CustomersPage() {
 
       <input
         className={inputClass}
-        placeholder="Search name, company, phone, email…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />

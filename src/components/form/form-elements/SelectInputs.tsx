@@ -29,7 +29,6 @@ export default function SelectInputs() {
           <Label>Select Input</Label>
           <Select
             options={options}
-            placeholder="Select Option"
             onChange={handleSelectChange}
             className="dark:bg-dark-900"
           />

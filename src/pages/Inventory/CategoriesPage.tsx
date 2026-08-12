@@ -76,7 +76,6 @@ function CategoryForm({
             className={inputClass}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Phones, Screens, Chargers…"
             autoFocus
           />
         </div>

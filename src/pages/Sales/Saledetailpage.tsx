@@ -197,7 +197,7 @@ export default function SaleDetailPage() {
                   <select value={pay.method} onChange={(e) => setPay((p) => ({ ...p, method: e.target.value }))} className="h-10 rounded-md border border-gray-300 bg-transparent px-2 text-sm dark:border-gray-700 dark:bg-gray-900">
                     {PAY_METHODS.map((m) => (<option key={m.value} value={m.value}>{m.label}</option>))}
                   </select>
-                  <input type="number" step="0.01" value={pay.amount} onChange={(e) => setPay((p) => ({ ...p, amount: e.target.value }))} placeholder={(balance / 100).toFixed(2)} className="h-10 w-32 rounded-md border border-gray-300 bg-transparent px-2 text-sm dark:border-gray-700" />
+                  <input type="number" step="0.01" value={pay.amount} onChange={(e) => setPay((p) => ({ ...p, amount: e.target.value }))} className="h-10 w-32 rounded-md border border-gray-300 bg-transparent px-2 text-sm dark:border-gray-700" />
                   <button onClick={addPayment} disabled={busy} className="h-10 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60">Add payment</button>
                 </div>
               )}

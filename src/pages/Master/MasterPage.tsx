@@ -112,7 +112,6 @@ export default function MasterPage() {
                 className={inputClass}
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
-                placeholder="Phone Station"
               />
             </div>
             <div>
@@ -145,7 +144,6 @@ export default function MasterPage() {
                 className={inputClass}
                 value={form.password}
                 onChange={(e) => set("password", e.target.value)}
-                placeholder="At least 8 characters"
               />
             </div>
             <div className="sm:col-span-2">

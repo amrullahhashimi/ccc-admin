@@ -62,7 +62,7 @@ export default function SalesPage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <input className={`${inputClass} sm:max-w-xs`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by sale #, customer, phone…" />
+        <input className={`${inputClass} sm:max-w-xs`} value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="flex gap-1">
           {STATUSES.map((s) => (
             <button key={s.value} onClick={() => setStatus(s.value)} className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${status === s.value ? "bg-brand-500 text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"}`}>{s.label}</button>

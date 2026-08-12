@@ -151,7 +151,6 @@ export default function ImeiCheckerPage() {
               ref={inputRef}
               value={imei}
               onChange={(e) => setImei(e.target.value)}
-              placeholder="123456789012345"
               inputMode="numeric"
               autoComplete="off"
               className={inputClass}

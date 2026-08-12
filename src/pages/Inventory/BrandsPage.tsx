@@ -69,7 +69,6 @@ function BrandForm({
             className={inputClass}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Apple, Samsung, Anker…"
             autoFocus
           />
         </div>
@@ -81,7 +80,6 @@ function BrandForm({
             className={`${inputClass} h-auto`}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Warranty terms, authorised dealer, anything worth remembering…"
           />
         </div>
 
@@ -180,7 +178,6 @@ export default function BrandsPage() {
 
       <input
         className={inputClass}
-        placeholder="Search brands…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />

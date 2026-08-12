@@ -90,7 +90,6 @@ export default function ItemSearchPage() {
       <div className="flex flex-wrap gap-3">
         <input
           className={`${inputClass} min-w-[220px] flex-1`}
-          placeholder="Search name, SKU, UPC, brand, or serial…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           autoFocus

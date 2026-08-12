@@ -68,7 +68,7 @@ export default function ServicePage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <input className={`${inputClass} flex-1 min-w-[220px]`} placeholder="Search number, device, customer…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className={`${inputClass} flex-1 min-w-[220px]`} value={q} onChange={(e) => setQ(e.target.value)} />
         <select className={`${inputClass} w-auto`} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
           {SERVICE_STATUSES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}

@@ -21,7 +21,6 @@ export default function InputGroup() {
           <Label>Email</Label>
           <div className="relative">
             <Input
-              placeholder="info@gmail.com"
               type="text"
               className="pl-[62px]"
             />
@@ -35,7 +34,6 @@ export default function InputGroup() {
           <PhoneInput
             selectPosition="start"
             countries={countries}
-            placeholder="+1 (555) 000-0000"
             onChange={handlePhoneNumberChange}
           />
         </div>{" "}
@@ -44,7 +42,6 @@ export default function InputGroup() {
           <PhoneInput
             selectPosition="end"
             countries={countries}
-            placeholder="+1 (555) 000-0000"
             onChange={handlePhoneNumberChange}
           />
         </div>

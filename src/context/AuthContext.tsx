@@ -190,7 +190,6 @@ function LockScreen() {
             autoComplete="off"
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="••••"
             className="h-14 w-full rounded-xl border border-gray-300 bg-transparent text-center text-2xl tracking-[0.5em] text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90"
           />
           {error && <p className="text-sm text-error-500">{error}</p>}

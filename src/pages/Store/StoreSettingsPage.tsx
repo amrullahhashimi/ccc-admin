@@ -219,7 +219,6 @@ export default function StoreSettingsPage() {
                 value={form.phone}
                 disabled={!mayEdit}
                 onChange={(e) => set("phone", e.target.value)}
-                placeholder="(403) 555-0134"
               />
             </div>
             <div>
@@ -229,7 +228,6 @@ export default function StoreSettingsPage() {
                 value={form.website}
                 disabled={!mayEdit}
                 onChange={(e) => set("website", e.target.value)}
-                placeholder="caceco.ca"
               />
             </div>
             <div className="sm:col-span-2">
@@ -240,7 +238,6 @@ export default function StoreSettingsPage() {
                 value={form.address}
                 disabled={!mayEdit}
                 onChange={(e) => set("address", e.target.value)}
-                placeholder="123 17 Ave SW, Calgary, AB"
               />
             </div>
           </div>
@@ -317,7 +314,6 @@ export default function StoreSettingsPage() {
           value={form.serviceTerms}
           disabled={!mayEdit}
           onChange={(e) => set("serviceTerms", e.target.value)}
-          placeholder={"Devices left over 30 days after completion may be sold to recover costs.\nWe are not responsible for data loss — please back up before handing the device in."}
         />
       </div>
 

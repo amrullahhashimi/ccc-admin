@@ -145,7 +145,6 @@ function VendorForm({
               className={inputClass}
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
-              placeholder="Mobile Parts Wholesale Ltd."
               autoFocus
             />
           </div>
@@ -156,7 +155,6 @@ function VendorForm({
               className={inputClass}
               value={form.accountNumber}
               onChange={(e) => set("accountNumber", e.target.value)}
-              placeholder="Your account with them"
             />
           </div>
 
@@ -263,7 +261,6 @@ function VendorForm({
               className={inputClass}
               value={form.address}
               onChange={(e) => set("address", e.target.value)}
-              placeholder="Street address"
             />
           </div>
 
@@ -273,7 +270,6 @@ function VendorForm({
               className={inputClass}
               value={form.address2}
               onChange={(e) => set("address2", e.target.value)}
-              placeholder="Unit, suite, floor"
             />
           </div>
 
@@ -292,7 +288,6 @@ function VendorForm({
               className={inputClass}
               value={form.province}
               onChange={(e) => set("province", e.target.value)}
-              placeholder="AB"
             />
           </div>
 
@@ -312,7 +307,6 @@ function VendorForm({
               className={`${inputClass} h-auto`}
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
-              placeholder="Payment terms, delivery days, minimum order…"
             />
           </div>
         </div>
@@ -419,7 +413,6 @@ export default function VendorsPage() {
 
       <input
         className={inputClass}
-        placeholder="Search name, account number, contact, phone, email…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
