@@ -5,6 +5,7 @@ const express = require("express");
 const session = require("express-session");
 const { PrismaClient } = require("@prisma/client");
 const { stateOf } = require("./session");
+const { requireStore } = require("./tenancy");
 
 // Sessions live in MySQL, not memory, so a restart or deploy doesn't sign everyone out.
 const expressMySQLSession = require("express-mysql-session");
@@ -72,18 +73,19 @@ function requireRole(...roles) {
 /* ----------------------------- API routes ----------------------------- */
 
 app.use("/api/auth", require("./routes/auth")(prisma));
-app.use("/api/products", requireLogin, require("./routes/products")(prisma, requireRole));
-app.use("/api/customers", requireLogin, require("./routes/customers")(prisma, requireRole));
-app.use("/api/vendors", requireLogin, require("./routes/vendors")(prisma, requireRole));
-app.use("/api/categories", requireLogin, require("./routes/categories")(prisma, requireRole));
-app.use("/api/brands", requireLogin, require("./routes/brands")(prisma, requireRole));
-app.use("/api/meta", requireLogin, require("./routes/meta")(prisma, requireRole));
-app.use("/api/dashboard", requireLogin, require("./routes/dashboard")(prisma));
-app.use("/api/service", requireLogin, require("./routes/service")(prisma, requireRole));
-app.use("/api/stores", requireLogin, require("./routes/stores")(prisma, requireRole));
-app.use("/api/sharing", requireLogin, require("./routes/sharing")(prisma, requireRole));
+app.use("/api/products", requireLogin, requireStore, require("./routes/products")(prisma, requireRole));
+app.use("/api/customers", requireLogin, requireStore, require("./routes/customers")(prisma, requireRole));
+app.use("/api/vendors", requireLogin, requireStore, require("./routes/vendors")(prisma, requireRole));
+app.use("/api/categories", requireLogin, requireStore, require("./routes/categories")(prisma, requireRole));
+app.use("/api/brands", requireLogin, requireStore, require("./routes/brands")(prisma, requireRole));
+app.use("/api/meta", requireLogin, requireStore, require("./routes/meta")(prisma, requireRole));
+app.use("/api/dashboard", requireLogin, requireStore, require("./routes/dashboard")(prisma));
+app.use("/api/service", requireLogin, requireStore, require("./routes/service")(prisma, requireRole));
+app.use("/api/sales", requireLogin, requireStore, require("./routes/sales")(prisma, requireRole));
+app.use("/api/stores", requireLogin, requireStore, require("./routes/stores")(prisma, requireRole));
+app.use("/api/sharing", requireLogin, requireStore, require("./routes/sharing")(prisma, requireRole));
 app.use("/api/master", requireLogin, require("./routes/master")(prisma));
-app.use("/api/tools", requireLogin, require("./routes/tools")(prisma));
+app.use("/api/tools", requireLogin, requireStore, require("./routes/tools")(prisma));
 app.use("/api/track", require("./routes/track")(prisma));
 app.use("/oauth", require("./routes/clover")());
 app.use("/oauth", require("./routes/clover-webhook")(prisma));

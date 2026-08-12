@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { conditionLabel, dashboard as dashboardApi, money, type Dashboard } from "../../lib/api";
+import { useStore } from "../../context/StoreContext";
 
 const panelClass =
   "rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
@@ -86,6 +87,7 @@ const icons = {
 /* ---------------------------------- page ---------------------------------- */
 
 export default function Home() {
+  const { store } = useStore();
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState("");
 
@@ -110,7 +112,8 @@ export default function Home() {
       <div>
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          What's on the shelves right now.
+          {/* Name the shop, so it's never ambiguous whose figures these are. */}
+          What's on the shelves at {store?.name ?? "your store"} right now.
         </p>
       </div>
 
@@ -211,7 +214,7 @@ export default function Home() {
         {/* ------------- by store ------------- */}
         <div className={panelClass}>
           <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-            <h2 className="font-semibold text-gray-800 dark:text-white/90">By store</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-white/90">By location</h2>
           </div>
           <div className="space-y-5 p-5">
             {byLocation.map((l) => (
@@ -221,7 +224,7 @@ export default function Home() {
               </div>
             ))}
             {byLocation.length === 0 && (
-              <p className="text-sm text-gray-500">No stores set up yet.</p>
+              <p className="text-sm text-gray-500">No locations set up yet.</p>
             )}
           </div>
         </div>

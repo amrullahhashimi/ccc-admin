@@ -193,7 +193,6 @@ export default function SharingPage() {
               className={inputClass}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="owner@phonestation.ca"
             />
             <button
               type="submit"

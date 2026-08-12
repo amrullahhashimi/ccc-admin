@@ -45,6 +45,24 @@ function assertStore(req, res, row, what = "record") {
   return true;
 }
 
+/**
+ * Refuses anything store-scoped when the session carries no store.
+ *
+ * Sessions live in MySQL and survive a deploy, so an account signed in before
+ * multi-store shipped still holds a session without a storeId. Without this
+ * guard those requests would run with `storeId: null` and quietly return the
+ * wrong rows. Signing in again rebuilds the session properly.
+ */
+function requireStore(req, res, next) {
+  if (!req.session?.user?.storeId) {
+    return res.status(401).json({
+      error: "Your session predates the store update — please sign out and back in.",
+      reauth: true,
+    });
+  }
+  next();
+}
+
 /** Only the platform owner may add or remove stores. */
 function requireSuperAdmin(req, res, next) {
   if (!req.session?.user?.superAdmin) {
@@ -66,4 +84,13 @@ async function nextNumber(prisma, model, req) {
   return (last?.number || 0) + 1;
 }
 
-module.exports = { storeId, scope, stamp, owns, assertStore, requireSuperAdmin, nextNumber };
+module.exports = {
+  storeId,
+  scope,
+  stamp,
+  owns,
+  assertStore,
+  requireStore,
+  requireSuperAdmin,
+  nextNumber,
+};
