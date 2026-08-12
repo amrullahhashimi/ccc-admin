@@ -8,7 +8,9 @@ module.exports = (prisma) => {
     try {
       const [products, customers, vendorCount, brandCount, locations] = await Promise.all([
         prisma.product.findMany({
-          where: { active: true },
+          // Everything on this page is derived from these rows, so missing the
+          // store filter here showed another shop's whole dashboard.
+          where: { active: true, ...scope(req) },
           include: {
             units: { select: { status: true, condition: true, locationId: true } },
             stockEntries: { select: { quantity: true } },
