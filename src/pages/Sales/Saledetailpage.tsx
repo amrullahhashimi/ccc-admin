@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { money, sales as salesApi, type Customer, type Sale } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useStore } from "../../context/StoreContext";
+import { useNotify } from "../../components/ui/notify";
 
 const panelClass = "rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
 
@@ -31,6 +32,7 @@ export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { can } = useAuth();
+  const notify = useNotify();
   const { store } = useStore(); // receipt header comes from Store settings
 
   const [sale, setSale] = useState<Sale | null>(null);
@@ -85,20 +87,33 @@ export default function SaleDetailPage() {
   };
 
   const voidSale = async () => {
-    if (!confirm(`Void sale #${sale.number}? Stock will be returned and this can't be undone.`)) return;
+    const ok = await notify.confirm({
+      title: `Void sale #${sale.number}?`,
+      message: "Stock will be returned and this can't be undone.",
+      confirmText: "Void sale",
+      variant: "error",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await salesApi.void(sale.id);
+      notify.success(`Sale #${sale.number} voided.`);
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not void.");
+      notify.error("Could not void.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
     setBusy(false);
   };
 
   const printReceipt = () => {
     const win = window.open("", "_blank", "width=420,height=640");
-    if (!win) return alert("Allow pop-ups to print the receipt.");
+    if (!win) {
+      return notify.warning("Pop-ups are blocked", {
+        message: "Allow pop-ups for this site to print the receipt.",
+      });
+    }
     const rows = (sale.items ?? [])
       .map((i) => `<tr><td>${escapeHtml(i.name)}${i.quantity > 1 ? ` ×${i.quantity}` : ""}</td><td style="text-align:right">${money(i.unitPriceCents * i.quantity)}</td></tr>`)
       .join("");

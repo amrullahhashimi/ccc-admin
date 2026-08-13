@@ -10,6 +10,7 @@ import { useStore } from "../../context/StoreContext";
 import { printInvoice } from "../Utils/Printservice";
 import { printServiceTag } from "../Inventory/printLabel";
 import SignaturePad from "./SignaturePad";
+import { useNotify } from "../../components/ui/notify";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -121,6 +122,7 @@ function TimePicker({ value, stepOptions, onChange }: { value: string; stepOptio
 
 /* ------------------------------ lines panel (edit only) ------------------------------ */
 function LinesPanel({ svc, onChanged }: { svc: Service; onChanged: () => void }) {
+  const notify = useNotify();
   const [tab, setTab] = useState<"part" | "labour">("part");
   const [error, setError] = useState("");
   const [productId, setProductId] = useState("");
@@ -150,8 +152,15 @@ function LinesPanel({ svc, onChanged }: { svc: Service; onChanged: () => void })
     catch (err) { setError(err instanceof Error ? err.message : "Could not add labour."); }
   };
   const removeLine = async (line: ServiceLine) => {
-    if (!confirm(`Remove "${line.name}"?`)) return;
-    try { await serviceApi.removeLine(line.id); onChanged(); } catch (err) { alert(err instanceof Error ? err.message : "Could not remove."); }
+    const ok = await notify.confirm({
+      title: `Remove "${line.name}"?`,
+      message: "It comes off this service order.",
+      confirmText: "Remove",
+      variant: "error",
+    });
+    if (!ok) return;
+    try { await serviceApi.removeLine(line.id); onChanged(); }
+    catch (err) { notify.error("Could not remove.", { message: err instanceof Error ? err.message : undefined }); }
   };
 
   const parts = (svc.parts ?? []).filter((l) => l.productId);
@@ -368,6 +377,7 @@ export default function ServiceNewPage() {
   const isEdit = !!id;
   const navigate = useNavigate();
   const { user, can } = useAuth();
+  const notify = useNotify();
   const { store } = useStore();
   const [params] = useSearchParams();
   const presetCustomer = params.get("customerId");
@@ -511,14 +521,30 @@ export default function ServiceNewPage() {
     return () => clearTimeout(t);
     // eslint-disable-next-line
   }, [form.device, form.deviceImei, form.passcode, form.warranty, form.dateInDate, form.dateInTime, form.dueDate, form.dueTime, form.issue, form.receiptNote, form.internalNote, form.deposit]);
-  const setStatus = async (status: string) => { if (!id) return; setF("status", status); try { await serviceApi.update(id, { status }); load(); } catch (err) { alert(err instanceof Error ? err.message : "Could not update status."); } };
-  const remove = async () => { if (!svc || !id || !confirm(`Delete service #${svc.number}?`)) return; try { await serviceApi.remove(id); navigate("/service"); } catch (err) { alert(err instanceof Error ? err.message : "Could not delete."); } };
+  const setStatus = async (status: string) => {
+    if (!id) return;
+    setF("status", status);
+    try { await serviceApi.update(id, { status }); load(); }
+    catch (err) { notify.error("Could not update status.", { message: err instanceof Error ? err.message : undefined }); }
+  };
+  const remove = async () => {
+    if (!svc || !id) return;
+    const ok = await notify.confirm({
+      title: `Delete service #${svc.number}?`,
+      message: "The order and everything on it are gone for good.",
+      confirmText: "Delete",
+      variant: "error",
+    });
+    if (!ok) return;
+    try { await serviceApi.remove(id); notify.success(`Service #${svc.number} deleted.`); navigate("/service"); }
+    catch (err) { notify.error("Could not delete.", { message: err instanceof Error ? err.message : undefined }); }
+  };
 
   const saveSignature = async (dataUrl: string) => {
     if (!id) return;
     setSigning(false);
     try { await serviceApi.update(id, { signatureData: dataUrl }); load(); }
-    catch (err) { alert(err instanceof Error ? err.message : "Could not save signature."); }
+    catch (err) { notify.error("Could not save signature.", { message: err instanceof Error ? err.message : undefined }); }
   };
 
   const copyTrack = async () => {

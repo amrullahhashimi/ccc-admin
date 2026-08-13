@@ -9,6 +9,7 @@ import {
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import SharedRecords from "./SharedRecords";
+import { useNotify } from "../../components/ui/notify";
 
 const cardClass =
   "rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]";
@@ -37,6 +38,7 @@ function describe(p: SharePermissions, catalogue: ShareCatalogue | null) {
 
 export default function SharingPage() {
   const { can } = useAuth();
+  const notify = useNotify();
   const mayManage = can("OWNER", "MANAGER");
 
   const [catalogue, setCatalogue] = useState<ShareCatalogue | null>(null);
@@ -138,11 +140,16 @@ export default function SharingPage() {
   }
 
   async function revoke(share: Share) {
-    if (!confirm(`Stop sharing with ${share.viewerStore?.name}? They lose access straight away.`)) {
-      return;
-    }
+    const ok = await notify.confirm({
+      title: `Stop sharing with ${share.viewerStore?.name}?`,
+      message: "They lose access straight away.",
+      confirmText: "Stop sharing",
+      variant: "error",
+    });
+    if (!ok) return;
     try {
       await sharing.revoke(share.id);
+      notify.success(`${share.viewerStore?.name} no longer has access.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not stop that share.");

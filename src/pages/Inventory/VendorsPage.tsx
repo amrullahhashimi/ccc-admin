@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { vendors as vendorsApi, type Vendor } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useNotify } from "../../components/ui/notify";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -342,6 +343,7 @@ function VendorForm({
 
 export default function VendorsPage() {
   const { can } = useAuth();
+  const notify = useNotify();
   const [rows, setRows] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -371,13 +373,22 @@ export default function VendorsPage() {
   }, [load, view.mode]);
 
   const remove = async (vendor: Vendor) => {
-    if (!confirm(`Remove ${vendor.name}?`)) return;
+    const ok = await notify.confirm({
+      title: `Remove ${vendor.name}?`,
+      message: "The vendor is taken off the list.",
+      confirmText: "Remove",
+      variant: "error",
+    });
+    if (!ok) return;
     try {
       const res = await vendorsApi.remove(vendor.id);
-      if (res.message) alert(res.message);
+      if (res.message) notify.info(res.message);
+      else notify.success(`${vendor.name} removed.`);
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not remove.");
+      notify.error("Could not remove.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 

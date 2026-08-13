@@ -790,3 +790,25 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+
+/* Toasts and confirm dialogs slide in from the right instead of popping. */
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateX(1rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.toast-enter {
+  animation: toast-enter 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter {
+    animation: none;
+  }
+}
