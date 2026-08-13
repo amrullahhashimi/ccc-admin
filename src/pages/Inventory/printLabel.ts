@@ -53,7 +53,9 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
   // Prefer the vendor recorded on this specific unit; fall back to the product's default.
   const vendorName = unit.vendor?.name ?? product.vendor?.name ?? null;
   const code = buildCode(vendorName, unit.labelCostCents, new Date(unit.createdAt));
-  const salePrice = product.salePriceCents != null ? "$" + (product.salePriceCents / 100).toFixed(2) : "";
+  // Same as the vendor above: this serial's own price wins, the product's is the fallback.
+  const priceCents = unit.salePriceCents ?? product.salePriceCents;
+  const salePrice = priceCents != null ? "$" + (priceCents / 100).toFixed(2) : "";
   const win = window.open("", "_blank", "width=520,height=240");
   if (!win) {
     notify.warning("Pop-ups are blocked", {
