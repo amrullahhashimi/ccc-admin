@@ -269,6 +269,7 @@ model ProductUnit {
   storage   String?
   color     String?
   warrantyMonths Int @default(3)
+  salePriceCents Int? // what this one unit sells for; null falls back to the product's price
   labelCostCents Int? // price shown on the printed tag; not used in accounting
   note String? @db.Text
   vendorId String?

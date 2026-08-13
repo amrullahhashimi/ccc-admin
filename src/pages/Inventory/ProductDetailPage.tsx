@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   CONDITIONS,
+  STORAGE_SIZES,
   WARRANTY_MONTHS,
   conditionLabel,
   meta as metaApi,
@@ -15,6 +16,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useStore } from "../../context/StoreContext";
 import { printUnitLabel } from "./printLabel";
+import { useNotify } from "../../components/ui/notify";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -44,6 +46,7 @@ function InventoryTab({
   onChanged: () => void;
 }) {
   const { can } = useAuth();
+  const notify = useNotify();
   const [form, setForm] = useState({
     quantity: "",
     cost: (product.costCents / 100).toFixed(2),
@@ -80,12 +83,21 @@ function InventoryTab({
   };
 
   const remove = async (entryId: string) => {
-    if (!confirm("Remove this stock entry? The quantity on hand will change.")) return;
+    const ok = await notify.confirm({
+      title: "Remove this stock entry?",
+      message: "The quantity on hand will change.",
+      confirmText: "Remove",
+      variant: "error",
+    });
+    if (!ok) return;
     try {
       await productsApi.removeStockEntry(entryId);
+      notify.success("Stock entry removed.");
       onChanged();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not remove.");
+      notify.error("Could not remove.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 
@@ -197,10 +209,15 @@ const blankSerial = {
   storage: "",
   color: "",
   warrantyMonths: "3",
+  salePrice: "",
   labelCost: "",
   note: "",
   vendorId: "",
 };
+
+/** Dollars for an input box, or "" when there's nothing to show. */
+const dollars = (cents?: number | null) =>
+  cents != null ? (cents / 100).toFixed(2) : "";
 
 function SerialsTab({
   product,
@@ -212,6 +229,7 @@ function SerialsTab({
   onChanged: () => void;
 }) {
   const { can } = useAuth();
+  const notify = useNotify();
   const { store } = useStore(); // label size comes from Store settings
   const [units, setUnits] = useState<ProductUnit[]>(product.units ?? []);
   const [error, setError] = useState("");
@@ -224,7 +242,24 @@ function SerialsTab({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sellingId, setSellingId] = useState<string | null>(null);
   const [returningId, setReturningId] = useState<string | null>(null);
-  const [form, setForm] = useState({ ...blankSerial });
+
+  // New serials start at the product's sale price from the Details tab; change
+  // it per unit when condition or what was paid makes this one worth more or less.
+  const productSalePrice = dollars(product.salePriceCents);
+
+  // The serial being added almost always came from the last batch of stock, so
+  // its cost and vendor seed the form. Entries come back newest first; the
+  // negative ones are sales and removals, so skip past those.
+  const lastStockAdded = (product.stockEntries ?? []).find((e) => e.quantity > 0);
+  const lastStockCost = dollars(lastStockAdded?.costCents);
+  const lastStockVendor = lastStockAdded?.vendorId ?? "";
+
+  const [form, setForm] = useState({
+    ...blankSerial,
+    salePrice: productSalePrice,
+    labelCost: lastStockCost,
+    vendorId: lastStockVendor,
+  });
 
   useEffect(() => setUnits(product.units ?? []), [product.units]);
 
@@ -236,9 +271,22 @@ function SerialsTab({
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Serials recorded before the list existed keep their own size as an option,
+  // so opening one to edit can't quietly drop it.
+  const storageOptions =
+    form.storage && !STORAGE_SIZES.includes(form.storage)
+      ? [...STORAGE_SIZES, form.storage]
+      : STORAGE_SIZES;
+
   const resetForm = () => {
     setEditingId(null);
-    setForm((f) => ({ ...blankSerial, locationId: f.locationId }));
+    setForm((f) => ({
+      ...blankSerial,
+      locationId: f.locationId,
+      salePrice: productSalePrice,
+      labelCost: lastStockCost,
+      vendorId: lastStockVendor,
+    }));
   };
 
   const editUnit = (u: ProductUnit) => {
@@ -250,22 +298,30 @@ function SerialsTab({
       storage: u.storage ?? "",
       color: u.color ?? "",
       warrantyMonths: String(u.warrantyMonths ?? 3),
-      labelCost: u.labelCostCents != null ? (u.labelCostCents / 100).toFixed(2) : "",
+      salePrice: u.salePriceCents != null ? dollars(u.salePriceCents) : productSalePrice,
+      labelCost: u.labelCostCents != null ? dollars(u.labelCostCents) : lastStockCost,
       note: u.note ?? "",
-      vendorId: u.vendorId ?? "",
+      vendorId: u.vendorId ?? lastStockVendor,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const addVendor = async () => {
-    const name = prompt("New vendor name:");
+    const name = await notify.prompt({
+      title: "New vendor",
+      label: "Vendor name",
+      confirmText: "Add vendor",
+    });
     if (!name || !name.trim()) return;
     try {
       const created = await vendorsApi.create({ name: name.trim() });
       setExtraVendors((vs) => [...vs, { id: created.id, name: created.name }]);
       set("vendorId", created.id);
+      notify.success(`${created.name} added.`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not create vendor.");
+      notify.error("Could not create vendor.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 
@@ -299,37 +355,63 @@ function SerialsTab({
   };
 
   const remove = async (unit: ProductUnit) => {
-    if (!confirm(`Remove serial ${unit.serial}?`)) return;
+    const ok = await notify.confirm({
+      title: `Remove serial ${unit.serial}?`,
+      message: "The unit is deleted from this product.",
+      confirmText: "Remove",
+      variant: "error",
+    });
+    if (!ok) return;
     try {
       await productsApi.removeUnit(unit.id);
       if (editingId === unit.id) resetForm();
+      notify.success(`Serial ${unit.serial} removed.`);
       onChanged();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not remove.");
+      notify.error("Could not remove.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 
   const sell = async (unit: ProductUnit) => {
-    if (!confirm(`Mark serial ${unit.serial} as sold? Quantity on hand drops by one.`)) return;
+    const ok = await notify.confirm({
+      title: `Mark serial ${unit.serial} as sold?`,
+      message: "Quantity on hand drops by one.",
+      confirmText: "Mark as sold",
+    });
+    if (!ok) return;
     setSellingId(unit.id);
     try {
       await productsApi.sellUnit(unit.id);
       if (editingId === unit.id) resetForm();
+      notify.success(`Serial ${unit.serial} marked as sold.`);
       onChanged();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not mark as sold.");
+      notify.error("Could not mark as sold.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
     setSellingId(null);
   };
 
   const returnToStock = async (unit: ProductUnit) => {
-    if (!confirm(`Return serial ${unit.serial} to stock? Quantity on hand is left as is — adjust it from the Inventory tab.`)) return;
+    const ok = await notify.confirm({
+      title: `Return serial ${unit.serial} to stock?`,
+      message:
+        "Quantity on hand is left as is — adjust it from the Inventory tab.",
+      confirmText: "Return to stock",
+    });
+    if (!ok) return;
     setReturningId(unit.id);
     try {
       await productsApi.returnUnit(unit.id);
+      notify.success(`Serial ${unit.serial} is back in stock.`);
       onChanged();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not return to stock.");
+      notify.error("Could not return to stock.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
     setReturningId(null);
   };
@@ -347,6 +429,7 @@ function SerialsTab({
             <th className="px-5 py-3">Location</th>
             <th className="px-5 py-3">Storage</th>
             <th className="px-5 py-3">Colour</th>
+            <th className="px-5 py-3">Sale price</th>
             <th className="px-5 py-3">Vendor</th>
             <th className="px-5 py-3">Status</th>
             <th className="px-5 py-3"></th>
@@ -366,6 +449,10 @@ function SerialsTab({
               <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">{u.location?.name ?? "—"}</td>
               <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">{u.storage || "—"}</td>
               <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">{u.color || "—"}</td>
+              {/* Units without their own price sell at the product's — shown greyed so the difference is visible. */}
+              <td className={`px-5 py-3 text-sm tabular-nums ${u.salePriceCents != null ? "text-gray-800 dark:text-white/90" : "text-gray-400 dark:text-gray-500"}`}>
+                {money(u.salePriceCents ?? product.salePriceCents)}
+              </td>
               <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">{u.vendor?.name ?? "—"}</td>
               <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">
                 {u.status === "IN_STOCK" ? "In stock" : u.status === "SOLD" ? "Sold" : u.status}
@@ -471,20 +558,30 @@ function SerialsTab({
               </select>
             </div>
             <div>
+              <label className={labelClass}>Sale price</label>
+              <input type="number" step="0.01" min="0" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} />
+            </div>
+            <div>
               <label className={labelClass}>Label cost</label>
               <input type="number" step="0.01" className={inputClass} value={form.labelCost} onChange={(e) => set("labelCost", e.target.value)} />
             </div>
             <div>
               <label className={labelClass}>Storage</label>
-              <input className={inputClass} value={form.storage} onChange={(e) => set("storage", e.target.value)} />
+              <select className={inputClass} value={form.storage} onChange={(e) => set("storage", e.target.value)}>
+                <option value="">—</option>
+                {storageOptions.map((s) => (<option key={s} value={s}>{s}</option>))}
+              </select>
             </div>
-            <div>
-              <label className={labelClass}>Colour</label>
-              <input className={inputClass} value={form.color} onChange={(e) => set("color", e.target.value)} />
-            </div>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <label className={labelClass}>Note</label>
-              <input className={inputClass} value={form.note} onChange={(e) => set("note", e.target.value)} />
+            {/* Colour and note share a row, with the note given the wider half. */}
+            <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3 lg:col-span-3">
+              <div>
+                <label className={labelClass}>Colour</label>
+                <input className={inputClass} value={form.color} onChange={(e) => set("color", e.target.value)} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Note</label>
+                <input className={inputClass} value={form.note} onChange={(e) => set("note", e.target.value)} />
+              </div>
             </div>
           </div>
 
@@ -667,6 +764,7 @@ export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { can } = useAuth();
+  const notify = useNotify();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -691,12 +789,21 @@ export default function ProductDetailPage() {
 
   const archive = async () => {
     if (!product) return;
-    if (!confirm(`Archive ${product.name}? It stays in past sales but won't show in search.`)) return;
+    const ok = await notify.confirm({
+      title: `Archive ${product.name}?`,
+      message: "It stays in past sales but won't show in search.",
+      confirmText: "Archive",
+      variant: "error",
+    });
+    if (!ok) return;
     try {
       await productsApi.archive(product.id);
+      notify.success(`${product.name} archived.`);
       navigate("/inventory/search");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not archive.");
+      notify.error("Could not archive.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 

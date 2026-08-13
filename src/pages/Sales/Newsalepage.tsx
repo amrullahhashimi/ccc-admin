@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useStore } from "../../context/StoreContext";
+import { useNotify } from "../../components/ui/notify";
 import {
   customers as customersApi,
   meta as metaApi,
@@ -50,6 +51,7 @@ const nextKey = () => `k${++keySeq}`;
 export default function NewSalePage() {
   const navigate = useNavigate();
   const { store } = useStore(); // receipt header comes from Store settings
+  const notify = useNotify();
   const [meta, setMeta] = useState<Meta | null>(null);
   const [locationId, setLocationId] = useState("");
 
@@ -151,7 +153,8 @@ export default function NewSalePage() {
       unitId: unit.id,
       name: `${product.name} — SN ${unit.serial}`,
       quantity: 1,
-      unitPriceCents: product.salePriceCents,
+      // This serial's own price when it has one, otherwise the product's.
+      unitPriceCents: unit.salePriceCents ?? product.salePriceCents,
       costCents: product.costCents,
       taxable: product.taxable,
       serialized: true,
@@ -222,7 +225,11 @@ export default function NewSalePage() {
   const printReceipt = (sale: Sale) => {
     const loc = meta?.locations.find((l) => l.id === sale.locationId);
     const win = window.open("", "_blank", "width=420,height=640");
-    if (!win) return alert("Allow pop-ups to print the receipt.");
+    if (!win) {
+      return notify.warning("Pop-ups are blocked", {
+        message: "Allow pop-ups for this site to print the receipt.",
+      });
+    }
     const rows = (sale.items ?? [])
       .map(
         (i) =>
@@ -383,7 +390,7 @@ export default function NewSalePage() {
                   <div className="flex flex-wrap gap-2">
                     {serialFor.units.map((u) => (
                       <button key={u.id} onClick={() => addSerialUnit(serialFor.product, u)} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                        {u.serial}{u.storage ? ` · ${u.storage}` : ""}
+                        {u.serial}{u.storage ? ` · ${u.storage}` : ""} · {money(u.salePriceCents ?? serialFor.product.salePriceCents)}
                       </button>
                     ))}
                   </div>
