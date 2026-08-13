@@ -37,6 +37,12 @@ function shapeProduct(body) {
   return d;
 }
 
+/** Dollars off a form field, in cents. Blank and missing both mean "not set". */
+function moneyOrNull(v) {
+  if (v === undefined || v === null || v === "") return null;
+  return Math.round(parseFloat(v) * 100) || 0;
+}
+
 /** Each incoming serial row, validated. */
 function shapeUnit(u) {
   const serial = String(u?.serial ?? "").trim();
@@ -48,10 +54,9 @@ function shapeUnit(u) {
   if (!locationId) throw new Error(`Pick a location for serial ${serial}.`);
 
   const warrantyMonths = parseInt(u?.warrantyMonths ?? 3, 10);
-  const labelCostCents =
-    u?.labelCost !== undefined && u.labelCost !== "" && u.labelCost !== null
-      ? Math.round(parseFloat(u.labelCost) * 100) || 0
-      : null;
+  const labelCostCents = moneyOrNull(u?.labelCost);
+  // Left blank means "whatever the product sells for" — see ProductUnit.salePriceCents.
+  const salePriceCents = moneyOrNull(u?.salePrice);
 
   return {
     serial,
@@ -60,6 +65,7 @@ function shapeUnit(u) {
     storage: String(u?.storage ?? "").trim() || null,
     color: String(u?.color ?? "").trim() || null,
     warrantyMonths: Number.isFinite(warrantyMonths) ? warrantyMonths : 3,
+    salePriceCents,
     labelCostCents,
     note: String(u?.note ?? "").trim() || null,
     vendorId: u?.vendorId || null,
@@ -336,12 +342,8 @@ module.exports = (prisma, requireRole) => {
         const w = parseInt(req.body.warrantyMonths, 10);
         if (Number.isFinite(w)) data.warrantyMonths = w;
       }
-      if (req.body?.labelCost !== undefined) {
-        data.labelCostCents =
-          req.body.labelCost === "" || req.body.labelCost === null
-            ? null
-            : Math.round(parseFloat(req.body.labelCost) * 100) || 0;
-      }
+      if (req.body?.labelCost !== undefined) data.labelCostCents = moneyOrNull(req.body.labelCost);
+      if (req.body?.salePrice !== undefined) data.salePriceCents = moneyOrNull(req.body.salePrice);
 
       const updated = await prisma.productUnit.update({ where: { id: req.params.unitId }, data });
       res.json(updated);

@@ -1,4 +1,5 @@
 import { conditionLabel, type Product, type ProductUnit, type Service, type Store } from "../../lib/api";
+import { notify } from "../../components/ui/notify";
 
 /**
  * Label stock, in millimetres. Comes from Store settings; the fallback is the
@@ -55,7 +56,9 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
   const salePrice = product.salePriceCents != null ? "$" + (product.salePriceCents / 100).toFixed(2) : "";
   const win = window.open("", "_blank", "width=520,height=240");
   if (!win) {
-    alert("Allow pop-ups for this site to print labels.");
+    notify.warning("Pop-ups are blocked", {
+      message: "Allow pop-ups for this site to print labels.",
+    });
     return;
   }
 
@@ -172,7 +175,9 @@ export function printServiceTag(service: Service, store?: Store | null) {
 
   const win = window.open("", "_blank", "width=520,height=240");
   if (!win) {
-    alert("Allow pop-ups for this site to print labels.");
+    notify.warning("Pop-ups are blocked", {
+      message: "Allow pop-ups for this site to print labels.",
+    });
     return;
   }
 

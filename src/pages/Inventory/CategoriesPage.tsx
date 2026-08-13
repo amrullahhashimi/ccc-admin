@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { categories as categoriesApi, type Category } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useNotify } from "../../components/ui/notify";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -135,6 +136,7 @@ function CategoryForm({
 
 export default function CategoriesPage() {
   const { can } = useAuth();
+  const notify = useNotify();
   const [tree, setTree] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -159,13 +161,22 @@ export default function CategoriesPage() {
   }, [load, view.mode]);
 
   const remove = async (category: Category) => {
-    if (!confirm(`Remove ${category.name}?`)) return;
+    const ok = await notify.confirm({
+      title: `Remove ${category.name}?`,
+      message: "The category is taken off the list.",
+      confirmText: "Remove",
+      variant: "error",
+    });
+    if (!ok) return;
     try {
       const res = await categoriesApi.remove(category.id);
-      if (res.message) alert(res.message);
+      if (res.message) notify.info(res.message);
+      else notify.success(`${category.name} removed.`);
       load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not remove.");
+      notify.error("Could not remove.", {
+        message: err instanceof Error ? err.message : undefined,
+      });
     }
   };
 

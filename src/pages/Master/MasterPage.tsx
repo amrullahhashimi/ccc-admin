@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { master, type MasterStore, type Store } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import StoreDetail from "./StoreDetail";
+import { useNotify } from "../../components/ui/notify";
 
 import { cardClass, inputClass, labelClass } from "./ui";
 
@@ -13,6 +14,7 @@ const emptyStore = { name: "", ownerName: "", ownerEmail: "", password: "" };
  */
 export default function MasterPage() {
   const { user } = useAuth();
+  const notify = useNotify();
   const [stores, setStores] = useState<MasterStore[]>([]);
   const [open, setOpen] = useState<Store | null>(null);
   const [form, setForm] = useState(emptyStore);
@@ -54,11 +56,18 @@ export default function MasterPage() {
 
   async function toggle(store: MasterStore) {
     const verb = store.active ? "Switch off" : "Switch back on";
-    if (!confirm(`${verb} ${store.name}? Their staff ${store.active ? "won't be able to sign in" : "can sign in again"}.`)) {
-      return;
-    }
+    const ok = await notify.confirm({
+      title: `${verb} ${store.name}?`,
+      message: `Their staff ${store.active ? "won't be able to sign in" : "can sign in again"}.`,
+      confirmText: verb,
+      variant: store.active ? "error" : "info",
+    });
+    if (!ok) return;
     try {
       await master.updateStore(store.id, { active: !store.active });
+      notify.success(
+        store.active ? `${store.name} switched off.` : `${store.name} is back on.`
+      );
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not change that store.");

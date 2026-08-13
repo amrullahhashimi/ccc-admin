@@ -6,6 +6,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import { AuthProvider, RequireAuth } from "./context/AuthContext";
 import { StoreProvider } from "./context/StoreContext";
+import { NotifyProvider } from "./components/ui/notify";
 
 // Uncomment each once the page file exists.
 import InventoryHome from "./pages/Inventory/InventoryHome";
@@ -34,6 +35,7 @@ import MasterPage from "./pages/Master/MasterPage";
 export default function App() {
   return (
     <Router>
+      <NotifyProvider>
       <AuthProvider>
         <StoreProvider>
         <ScrollToTop />
@@ -83,6 +85,7 @@ export default function App() {
         </Routes>
         </StoreProvider>
       </AuthProvider>
+      </NotifyProvider>
     </Router>
   );
 }

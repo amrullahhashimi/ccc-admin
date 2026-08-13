@@ -12,6 +12,7 @@ import {
   type User,
 } from "../../lib/api";
 import { TICKET_STATUS, cardClass, inputClass, labelClass, tableWrap, td, th } from "./ui";
+import { useNotify } from "../../components/ui/notify";
 
 type Tab = "inventory" | "service" | "customers" | "staff";
 
@@ -34,6 +35,7 @@ const emptyUser = { name: "", email: "", password: "", role: "STAFF" as Role };
  * the master sets up accounts, which is the whole point of the screen.
  */
 export default function StoreDetail({ store, onBack }: { store: Store; onBack: () => void }) {
+  const notify = useNotify();
   const [tab, setTab] = useState<Tab>("inventory");
   const [counts, setCounts] = useState<StoreCounts | null>(null);
   const [q, setQ] = useState("");
@@ -101,9 +103,21 @@ export default function StoreDetail({ store, onBack }: { store: Store; onBack: (
 
   async function toggleUser(u: User) {
     const verb = u.active === false ? "Switch back on" : "Switch off";
-    if (!confirm(`${verb} ${u.name}'s account?`)) return;
+    const ok = await notify.confirm({
+      title: `${verb} ${u.name}'s account?`,
+      message:
+        u.active === false
+          ? "They can sign in again straight away."
+          : "They won't be able to sign in.",
+      confirmText: verb,
+      variant: u.active === false ? "info" : "error",
+    });
+    if (!ok) return;
     try {
       await master.updateUser(u.id, { active: u.active === false });
+      notify.success(
+        u.active === false ? `${u.name} is back on.` : `${u.name} switched off.`
+      );
       await reloadStaff();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not change that account.");

@@ -1,4 +1,5 @@
 import type { Service, Store } from "../../lib/api";
+import { notify } from "../../components/ui/notify";
 
 /* ────── fallbacks, used only until a store fills in its settings ────── */
 const STORE_NAME = "Canadian Cellular Communication";
@@ -43,7 +44,12 @@ const phoneOf = (s: Service) => s.customer?.phone || s.customer?.mobile || "—"
 
 function printHtml(html: string) {
   const w = window.open("", "_blank", "width=900,height=700");
-  if (!w) { alert("Please allow pop-ups to print."); return; }
+  if (!w) {
+    notify.warning("Pop-ups are blocked", {
+      message: "Allow pop-ups for this site, then print again.",
+    });
+    return;
+  }
   w.document.write(html);
   w.document.close();
   w.focus();

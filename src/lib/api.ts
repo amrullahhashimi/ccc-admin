@@ -65,6 +65,7 @@ export interface ProductUnit {
   location?: { id: string; name: string };
   status: string; // IN_STOCK | RESERVED | SOLD | RETURNED
   createdAt: string;
+  salePriceCents?: number | null; // null means "use the product's sale price"
   labelCostCents?: number | null;
   note?: string | null;
   vendorId?: string | null;
@@ -193,6 +194,7 @@ export interface UnitInput {
   storage?: string;
   color?: string;
   warrantyMonths?: number;
+  salePrice?: string;
   labelCost?: string;
   note?: string;
   vendorId?: string | null;
@@ -489,6 +491,20 @@ export const SERVICE_STATUSES = [
   { value: "READY", label: "Done" },
   { value: "COLLECTED", label: "Picked up" },
   { value: "CANCELLED", label: "Cancelled" },
+];
+
+/** Storage sizes for a serial. Free text underneath, so older odd values still load. */
+export const STORAGE_SIZES: string[] = [
+  "16 GB",
+  "32 GB",
+  "64 GB",
+  "128 GB",
+  "256 GB",
+  "512 GB",
+  "1 TB",
+  "2 TB",
+  "4 TB",
+  "8 TB",
 ];
 
 export const WARRANTY_MONTHS: { value: number; label: string }[] = [
