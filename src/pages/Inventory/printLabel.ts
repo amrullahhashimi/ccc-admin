@@ -82,11 +82,11 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
         font-family: Arial, Helvetica, sans-serif;
         overflow: hidden;
     }
-    .top { font-size: 7pt; font-weight: 700; line-height: 1.1;
-        width: 100%; height: 0.16in; overflow: hidden;
+    .top { font-size: 14pt; font-weight: 700; line-height: 1.1;
+        width: 100%; height: 0.32in; overflow: hidden;
         white-space: nowrap; text-overflow: ellipsis; }
     .barcode { display: flex; flex-direction: column; align-items: center;
-        width: 100%; height: 0.62in; }
+        width: 100%; height: 0.31in; }
     svg { width: 100%; height: 100%; }
     .serial { font-size: 6.5pt; letter-spacing: 0.4px; line-height: 1; margin-top: 2px; }
     .bottom { display: flex; align-items: baseline; justify-content: space-between;
@@ -110,7 +110,7 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
   <script>
     JsBarcode("#bc", ${JSON.stringify(unit.serial)}, {
       format: "CODE128", displayValue: false,
-      margin: 0, height: 44, width: 1.6
+      margin: 0, height: 22, width: 1.6
     });
     window.onafterprint = () => window.close();
     setTimeout(() => { window.focus(); window.print(); }, 250);
