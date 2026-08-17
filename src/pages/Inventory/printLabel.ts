@@ -44,7 +44,7 @@ function vendorLetters(name: string | null | undefined): string {
  * centered, three rows:
  *   1. name · storage · condition · note
  *   2. barcode of the serial, with the serial as text under it
- *   3. the price code and the sale price
+ *   3. the price code, the shop website from settings, and the sale price
  *
  * Like the service tag, every dimension is a multiple of `--s` — the ratio of
  * the configured stock to the 89mm x 29mm default — so the layout fills
@@ -67,6 +67,8 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
   // Same as the vendor above: this serial's own price wins, the product's is the fallback.
   const priceCents = unit.salePriceCents ?? product.salePriceCents;
   const salePrice = priceCents != null ? "$" + (priceCents / 100).toFixed(2) : "";
+  // Shop website from Store settings; the row just closes up if it's blank.
+  const website = (store?.website ?? "").trim();
   // Preview window follows the stock so the on-screen label isn't letterboxed.
   const winW = Math.round(widthMm * 6);
   const winH = Math.round(heightMm * 6) + 60;
@@ -110,8 +112,13 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
         line-height: 1; margin-top: calc(2px * var(--s)); flex: 0 0 auto; }
     .bottom { display: flex; align-items: baseline; justify-content: space-between;
         width: 100%; gap: calc(4px * var(--s)); flex: 0 0 auto; }
-    .code { font-size: calc(11pt * var(--s)); font-weight: 700; line-height: 1; }
-    .price { font-size: calc(13pt * var(--s)); font-weight: 700; line-height: 1; }
+    .code { font-size: calc(11pt * var(--s)); font-weight: 700; line-height: 1;
+        flex: 0 0 auto; }
+    .web { font-size: calc(7.5pt * var(--s)); line-height: 1; flex: 1 1 auto;
+        min-width: 0; text-align: center;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .price { font-size: calc(13pt * var(--s)); font-weight: 700; line-height: 1;
+        flex: 0 0 auto; }
 </style>
 </head>
 <body>
@@ -123,6 +130,7 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
     </div>
     <div class="bottom">
       <span class="code">${escapeHtml(code)}</span>
+      ${website ? `<span class="web">${escapeHtml(website)}</span>` : ""}
       <span class="price">${escapeHtml(salePrice)}</span>
     </div>
   </div>
