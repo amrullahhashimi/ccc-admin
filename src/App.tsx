@@ -15,6 +15,7 @@ import CategoriesPage from "./pages/Inventory/CategoriesPage";
 import BrandsPage from "./pages/Inventory/BrandsPage";
 import NewItemPage from "./pages/Inventory/NewItemPage";
 import ItemSearchPage from "./pages/Inventory/Itemsearchpage";
+import ArchivedItemsPage from "./pages/Inventory/ArchivedItemsPage";
 import ProductDetailPage from "./pages/Inventory/ProductDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import CustomersPage from "./pages/Inventory/CustomersPage";
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/inventory/brands" element={<BrandsPage />} />
             <Route path="/inventory/new" element={<NewItemPage />} />
             <Route path="/inventory/search" element={<ItemSearchPage />} />
+            <Route path="/inventory/archive" element={<ArchivedItemsPage />} />
             <Route path="/inventory/items/:id" element={<ProductDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route index path="/" element={<Home />} />

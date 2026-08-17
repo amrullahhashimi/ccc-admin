@@ -286,6 +286,8 @@ export interface ProductFilters {
   location?: string;
   condition?: string;
   lowStock?: boolean;
+  /** Archived items instead of live ones — the two lists never mix. */
+  archived?: boolean;
 }
 
 export const products = {
@@ -295,6 +297,7 @@ export const products = {
     if (filters.location) p.set("location", filters.location);
     if (filters.condition) p.set("condition", filters.condition);
     if (filters.lowStock) p.set("lowStock", "1");
+    if (filters.archived) p.set("archived", "1");
     const qs = p.toString();
     return request<Product[]>("/api/products" + (qs ? `?${qs}` : ""));
   },
@@ -305,6 +308,8 @@ export const products = {
   update: (id: string, data: Record<string, unknown>) =>
     request<Product>(`/api/products/${id}`, { method: "PATCH", ...body(data) }),
   archive: (id: string) => request<{ ok: true }>(`/api/products/${id}`, { method: "DELETE" }),
+  restore: (id: string) =>
+    request<{ ok: true }>(`/api/products/${id}/restore`, { method: "POST" }),
 
   addUnits: (productId: string, units: UnitInput[]) =>
     request<ProductUnit[]>(`/api/products/${productId}/units`, { method: "POST", ...body({ units }) }),

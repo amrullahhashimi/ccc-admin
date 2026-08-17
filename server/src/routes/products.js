@@ -124,10 +124,13 @@ module.exports = (prisma, requireRole) => {
 
   router.get("/", async (req, res) => {
     try {
-      const { q, location, condition, lowStock, includeInactive } = req.query;
+      const { q, location, condition, lowStock, includeInactive, archived } = req.query;
 
       const where = { ...scope(req) };
-      if (!includeInactive) where.active = true;
+      // `archived` is the Archived items screen: only what was taken out of
+      // circulation. `includeInactive` stays the "both" case it always was.
+      if (archived) where.active = false;
+      else if (!includeInactive) where.active = true;
       if (q) {
         where.OR = [
           { name: { contains: q } },
@@ -488,6 +491,18 @@ module.exports = (prisma, requireRole) => {
       if (!(await guardProduct(req, res, req.params.id))) return;
 
       await prisma.product.update({ where: { id: req.params.id }, data: { active: false } });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(404).json({ error: "Product not found." });
+    }
+  });
+
+  /** Undo of the above. Same roles that can archive can put an item back. */
+  router.post("/:id/restore", requireRole("OWNER", "MANAGER"), async (req, res) => {
+    try {
+      if (!(await guardProduct(req, res, req.params.id))) return;
+
+      await prisma.product.update({ where: { id: req.params.id }, data: { active: true } });
       res.json({ ok: true });
     } catch (err) {
       res.status(404).json({ error: "Product not found." });

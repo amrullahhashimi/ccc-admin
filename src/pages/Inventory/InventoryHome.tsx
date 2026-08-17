@@ -53,6 +53,14 @@ const BrandIcon = (
   </svg>
 );
 
+const ArchiveIcon = (
+  <svg viewBox="0 0 24 24" {...stroke}>
+    <rect x="3" y="4" width="18" height="4" rx="1" />
+    <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+    <path d="M10 12h4" />
+  </svg>
+);
+
 /* --------------------------------- tiles --------------------------------- */
 
 const tiles: Tile[] = [
@@ -61,6 +69,7 @@ const tiles: Tile[] = [
   { name: "Vendors", path: "/inventory/vendors", icon: VendorIcon },
   { name: "Categories", path: "/inventory/categories", icon: CategoryIcon },
   { name: "Brands", path: "/inventory/brands", icon: BrandIcon },
+  { name: "Archived", path: "/inventory/archive", icon: ArchiveIcon },
 ];
 
 /* ---------------------------------- page ---------------------------------- */
@@ -70,7 +79,7 @@ export default function InventoryHome() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Inventory</h1>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6">
         {tiles.map((tile) => (
           <Link
             key={tile.name}
