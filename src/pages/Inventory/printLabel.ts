@@ -158,15 +158,23 @@ function serviceSubtotalCents(service: Service): number {
 }
 
 /**
- * A single 3.5" x 1.125" service tag with 3px side margins.
+ * The service tag, sized from the label stock in Store settings.
  * Two columns:
  *   Left  — customer name, phone, device, passcode, PROBLEM + reported problem
- *   Right — #number, Code128 barcode of the number, TOTAL (GST included)
+ *   Right — #number and the price
+ *
+ * Every dimension is a multiple of `--s`, the ratio of the configured stock to
+ * the 89mm x 29mm default, so the same layout fills whatever roll the machine
+ * is loaded with instead of overflowing small stock or stranding big stock.
  *
  * Leaves printUnitLabel untouched.
  */
 export function printServiceTag(service: Service, store?: Store | null) {
   const { widthMm, heightMm } = labelSize(store);
+  const scale = Math.min(
+    widthMm / DEFAULT_LABEL.widthMm,
+    heightMm / DEFAULT_LABEL.heightMm,
+  ).toFixed(3);
   const name = customerName(service);
   const phone = customerPhone(service);
   const device = deviceLine(service);
@@ -175,7 +183,10 @@ export function printServiceTag(service: Service, store?: Store | null) {
   const problem = service.issue ?? "";
   const price = "$" + (serviceSubtotalCents(service) / 100).toFixed(2);
 
-  const win = window.open("", "_blank", "width=520,height=240");
+  // Preview window follows the stock so the on-screen tag isn't letterboxed.
+  const winW = Math.round(widthMm * 6);
+  const winH = Math.round(heightMm * 6) + 60;
+  const win = window.open("", "_blank", `width=${winW},height=${winH}`);
   if (!win) {
     notify.warning("Pop-ups are blocked", {
       message: "Allow pop-ups for this site to print labels.",
@@ -188,34 +199,40 @@ export function printServiceTag(service: Service, store?: Store | null) {
 <head>
 <meta charset="utf-8" />
 <title>Service ${escapeHtml(numberStr)}</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
     @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
     html, body { margin: 0; padding: 0; }
     .label {
+        --s: ${scale};
         width: ${widthMm}mm; height: ${heightMm}mm;
-        box-sizing: border-box; padding: 0.05in 6px 0.05in 3px;
-        display: flex; gap: 6px;
+        box-sizing: border-box;
+        padding: calc(0.05in * var(--s)) calc(6px * var(--s))
+                 calc(0.05in * var(--s)) calc(3px * var(--s));
+        display: flex; gap: calc(6px * var(--s));
         font-family: Arial, Helvetica, sans-serif;
         overflow: hidden;
     }
     .left { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
-    .right { width: 1.2in; display: flex; flex-direction: column;
-        align-items: center; justify-content: space-between; text-align: center; }
-    .name { font-size: 9pt; font-weight: 700; line-height: 1.15;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .phone { font-size: 7pt; line-height: 1.2; }
-    .device { font-size: 8pt; font-weight: 700; line-height: 1.2;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .pass { font-size: 7.5pt; line-height: 1.2; }
-    .lbl { font-size: 6pt; color: #888; letter-spacing: 0.5px; margin-top: 1px; }
-    .problem { font-size: 7.5pt; line-height: 1.05;
+    .right { flex: 0 0 auto; max-width: 34%; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; text-align: center;
+        gap: calc(4px * var(--s)); }
+    /* Wraps to a second line the moment it runs into the price column. */
+    .name { font-size: calc(9pt * var(--s)); font-weight: 700; line-height: 1.15;
+        overflow-wrap: anywhere;
         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .num { font-size: 11pt; font-weight: 700; line-height: 1; }
-    .bcwrap { width: 100%; height: 0.42in; }
-    .bcwrap svg { width: 100%; height: 100%; }
-    .tl { font-size: 6pt; color: #888; letter-spacing: 0.5px; line-height: 1; }
-    .tv { font-size: 12pt; font-weight: 700; line-height: 1.1; }
+    .phone { font-size: calc(7pt * var(--s)); line-height: 1.2; }
+    .device { font-size: calc(8pt * var(--s)); font-weight: 700; line-height: 1.2;
+        overflow-wrap: anywhere;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .pass { font-size: calc(7.5pt * var(--s)); line-height: 1.2; }
+    .lbl { font-size: calc(6pt * var(--s)); color: #888;
+        letter-spacing: calc(0.5px * var(--s)); margin-top: calc(1px * var(--s)); }
+    .problem { font-size: calc(7.5pt * var(--s)); line-height: 1.05;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .num { font-size: calc(14pt * var(--s)); font-weight: 700; line-height: 1; }
+    .tl { font-size: calc(6pt * var(--s)); color: #888;
+        letter-spacing: calc(0.5px * var(--s)); line-height: 1; }
+    .tv { font-size: calc(15pt * var(--s)); font-weight: 700; line-height: 1.1; }
 </style>
 </head>
 <body>
@@ -230,7 +247,6 @@ export function printServiceTag(service: Service, store?: Store | null) {
     </div>
     <div class="right">
       <div class="num">#${escapeHtml(numberStr)}</div>
-      <div class="bcwrap"><svg id="bc"></svg></div>
       <div>
         <div class="tl">PRICE</div>
         <div class="tv">${escapeHtml(price)}</div>
@@ -238,10 +254,6 @@ export function printServiceTag(service: Service, store?: Store | null) {
     </div>
   </div>
   <script>
-    JsBarcode("#bc", ${JSON.stringify(numberStr)}, {
-      format: "CODE128", displayValue: false,
-      margin: 0, height: 34, width: 1.6
-    });
     window.onafterprint = () => window.close();
     setTimeout(() => { window.focus(); window.print(); }, 250);
   </script>
