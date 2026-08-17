@@ -501,11 +501,29 @@ export default function ServiceNewPage() {
     deposit: form.deposit,
   });
 
+  /**
+   * The loaded order with whatever the form shows right now laid over it.
+   * Autosave only lands 800ms after the last keystroke, so printing straight
+   * after typing would otherwise put the previous values on the tag/invoice.
+   */
+  const printable = (s: Service): Service => ({
+    ...s,
+    deviceMake: null,
+    deviceModel: form.device || null,
+    deviceImei: form.deviceImei || null,
+    passcode: form.passcode || null,
+    issue: form.issue,
+    receiptNote: form.receiptNote || null,
+    dateIn: combine(form.dateInDate, form.dateInTime) ?? s.dateIn,
+    promisedAt: combine(form.dueDate, form.dueTime) ?? s.promisedAt,
+    depositCents: form.deposit === "" ? s.depositCents : Math.round(parseFloat(form.deposit) * 100) || 0,
+  });
+
   // Save (edit)
   const save = async () => {
     if (!id) return;
     setSaveState("saving");
-    try { await serviceApi.update(id, payload()); setSaveState("saved"); }
+    try { setSvc(await serviceApi.update(id, payload())); dirtyRef.current = false; setSaveState("saved"); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not save."); setSaveState("idle"); }
   };
 
@@ -515,7 +533,7 @@ export default function ServiceNewPage() {
     if (!dirtyRef.current) return;      // don't save on the initial load
     setSaveState("saving");
     const t = setTimeout(async () => {
-      try { await serviceApi.update(id!, payload()); setSaveState("saved"); }
+      try { setSvc(await serviceApi.update(id!, payload())); dirtyRef.current = false; setSaveState("saved"); }
       catch { setSaveState("idle"); }
     }, 800);
     return () => clearTimeout(t);
@@ -623,8 +641,8 @@ export default function ServiceNewPage() {
           )}
           {isEdit && svc && (
             <>
-              <button type="button" onClick={() => printServiceTag(svc, store)} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print tag</button>
-              <button type="button" onClick={() => printInvoice(svc, { store, trackUrl: svc.trackToken ? `${window.location.origin}/track/${svc.trackToken}` : undefined })} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print invoice</button>
+              <button type="button" onClick={() => printServiceTag(printable(svc), store)} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print tag</button>
+              <button type="button" onClick={() => printInvoice(printable(svc), { store, trackUrl: svc.trackToken ? `${window.location.origin}/track/${svc.trackToken}` : undefined })} className="h-11 rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Print invoice</button>
             </>
           )}
           {isEdit && (
