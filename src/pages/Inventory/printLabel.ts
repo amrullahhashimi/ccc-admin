@@ -40,13 +40,24 @@ function vendorLetters(name: string | null | undefined): string {
 }
 
 /**
- * A single 3.5" x 1.125" label, everything centered, three rows:
- *   1. name · storage · condition · note   (one line)
+ * The unit label, sized from the label stock in Store settings. Everything
+ * centered, three rows:
+ *   1. name · storage · condition · note
  *   2. barcode of the serial, with the serial as text under it
- *   3. the price code
+ *   3. the price code and the sale price
+ *
+ * Like the service tag, every dimension is a multiple of `--s` — the ratio of
+ * the configured stock to the 89mm x 29mm default — so the layout fills
+ * whatever roll is loaded. Nothing is dropped to make it fit: the top line
+ * wraps and then shrinks until it fits its box, and the barcode is stretched
+ * through a viewBox rather than clipped.
  */
 export function printUnitLabel(product: Product, unit: ProductUnit, store?: Store | null) {
   const { widthMm, heightMm } = labelSize(store);
+  const scale = Math.min(
+    widthMm / DEFAULT_LABEL.widthMm,
+    heightMm / DEFAULT_LABEL.heightMm,
+  ).toFixed(3);
   const topLine = [product.name, unit.storage, conditionLabel(unit.condition), unit.note]
     .filter(Boolean)
     .join(" · ");
@@ -56,7 +67,10 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
   // Same as the vendor above: this serial's own price wins, the product's is the fallback.
   const priceCents = unit.salePriceCents ?? product.salePriceCents;
   const salePrice = priceCents != null ? "$" + (priceCents / 100).toFixed(2) : "";
-  const win = window.open("", "_blank", "width=520,height=240");
+  // Preview window follows the stock so the on-screen label isn't letterboxed.
+  const winW = Math.round(widthMm * 6);
+  const winH = Math.round(heightMm * 6) + 60;
+  const win = window.open("", "_blank", `width=${winW},height=${winH}`);
   if (!win) {
     notify.warning("Pop-ups are blocked", {
       message: "Allow pop-ups for this site to print labels.",
@@ -74,25 +88,30 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
     @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
     html, body { margin: 0; padding: 0; }
     .label {
+        --s: ${scale};
         width: ${widthMm}mm; height: ${heightMm}mm;
-        box-sizing: border-box; padding: 0.05in 0.12in;
+        box-sizing: border-box;
+        padding: calc(0.05in * var(--s)) calc(0.12in * var(--s));
         display: flex; flex-direction: column;
         align-items: center; justify-content: space-between;
         text-align: center;
         font-family: Arial, Helvetica, sans-serif;
         overflow: hidden;
     }
-    .top { font-size: 14pt; font-weight: 700; line-height: 1.1;
-        width: 100%; height: 0.32in; overflow: hidden;
-        white-space: nowrap; text-overflow: ellipsis; }
+    /* Wraps to a second line rather than truncating; the script below then
+       shrinks it until both lines fit this box. */
+    .top { font-size: calc(14pt * var(--s)); font-weight: 700; line-height: 1.1;
+        width: 100%; height: calc(0.36in * var(--s)); overflow: hidden;
+        overflow-wrap: anywhere; }
     .barcode { display: flex; flex-direction: column; align-items: center;
-        width: 100%; height: 0.31in; }
-    svg { width: 100%; height: 100%; }
-    .serial { font-size: 6.5pt; letter-spacing: 0.4px; line-height: 1; margin-top: 2px; }
+        width: 100%; flex: 1 1 auto; min-height: 0; }
+    svg { display: block; width: 100%; flex: 1 1 0; min-height: 0; }
+    .serial { font-size: calc(6.5pt * var(--s)); letter-spacing: calc(0.4px * var(--s));
+        line-height: 1; margin-top: calc(2px * var(--s)); flex: 0 0 auto; }
     .bottom { display: flex; align-items: baseline; justify-content: space-between;
-        width: 100%; }
-    .code { font-size: 11pt; font-weight: 700; line-height: 1; }
-    .price { font-size: 13pt; font-weight: 700; line-height: 1; }
+        width: 100%; gap: calc(4px * var(--s)); flex: 0 0 auto; }
+    .code { font-size: calc(11pt * var(--s)); font-weight: 700; line-height: 1; }
+    .price { font-size: calc(13pt * var(--s)); font-weight: 700; line-height: 1; }
 </style>
 </head>
 <body>
@@ -108,10 +127,30 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
     </div>
   </div>
   <script>
-    JsBarcode("#bc", ${JSON.stringify(unit.serial)}, {
+    var svg = document.getElementById("bc");
+    JsBarcode(svg, ${JSON.stringify(unit.serial)}, {
       format: "CODE128", displayValue: false,
       margin: 0, height: 22, width: 1.6
     });
+    // JsBarcode sizes the svg in pixels. Trade those fixed attributes for a
+    // viewBox so the bars stretch to whatever box the flex layout gives them.
+    var bw = svg.getAttribute("width"), bh = svg.getAttribute("height");
+    if (bw && bh) {
+      svg.setAttribute("viewBox", "0 0 " + bw + " " + bh);
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.removeAttribute("width");
+      svg.removeAttribute("height");
+    }
+
+    // Shrink the top line until it fits its box, so a long name wraps to a
+    // second line instead of being cut off.
+    var top = document.querySelector(".top");
+    var size = parseFloat(getComputedStyle(top).fontSize);
+    for (var i = 0; i < 40 && top.scrollHeight > top.clientHeight && size > 4; i++) {
+      size -= 0.5;
+      top.style.fontSize = size + "px";
+    }
+
     window.onafterprint = () => window.close();
     setTimeout(() => { window.focus(); window.print(); }, 250);
   </script>
