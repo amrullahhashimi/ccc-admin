@@ -171,7 +171,7 @@ function LinesPanel({ svc, onChanged }: { svc: Service; onChanged: () => void })
       <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">{line.quantity}</td>
       <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">{money(line.priceCents)}</td>
       <td className="px-5 py-3 text-right text-sm font-medium tabular-nums text-gray-800 dark:text-white/90">{money(lineTotal(line))}</td>
-      <td className="px-5 py-3 text-right"><button onClick={() => removeLine(line)} className="text-xs font-medium text-error-500 hover:text-error-600">Remove</button></td>
+      <td className="px-5 py-3 text-right"><button type="button" onClick={() => removeLine(line)} className="text-xs font-medium text-error-500 hover:text-error-600">Remove</button></td>
     </tr>
   );
 

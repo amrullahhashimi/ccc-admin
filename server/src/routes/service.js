@@ -17,10 +17,14 @@ function withTotals(t) {
 
 function shapeService(body) {
   const d = {};
-  ["deviceMake", "deviceModel", "deviceImei", "passcode", "issue", "diagnosis",
+  ["deviceMake", "deviceModel", "deviceImei", "passcode", "diagnosis",
    "receiptNote", "externalNote", "internalNote"].forEach((k) => {
     if (body[k] !== undefined) d[k] = body[k] === "" ? null : String(body[k]).trim();
   });
+  // `issue` is the one required text column on Ticket, and a draft starts with
+  // it blank. Clearing it has to stay an empty string: null is rejected by the
+  // schema, which broke every save on a ticket with no problem typed in.
+  if (body.issue !== undefined) d.issue = String(body.issue ?? "").trim();
   if (body.status !== undefined && STATUSES.includes(body.status)) d.status = body.status;
   if (body.warranty !== undefined) d.warranty = !!body.warranty;
   if (body.technicianId !== undefined) d.technicianId = body.technicianId || null;
