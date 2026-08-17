@@ -289,6 +289,20 @@ layer(base);
     display: none;
     -webkit-appearance: none;
   }
+
+  /* No stepper arrows on number fields anywhere — prices and quantities are
+     typed, and a stray click on an arrow is a silent edit. The matching wheel
+     guard lives in src/App.tsx. */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    display: none;
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
 
 .tableCheckbox:checked ~ span span {

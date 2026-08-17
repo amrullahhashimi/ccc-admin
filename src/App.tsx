@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router";
 import SignIn from "./pages/AuthPages/SignIn";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -33,7 +34,28 @@ import SharingPage from "./pages/Store/SharingPage";
 import MasterPage from "./pages/Master/MasterPage";
 
 
+/**
+ * A focused number field changes value when the wheel passes over it, which
+ * silently edits a price while someone is only scrolling the page. Dropping
+ * focus first means the browser has nothing to step, and the page scrolls as
+ * normal. The arrows themselves are hidden in index.css.
+ */
+function useNoWheelOnNumbers() {
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      const el = document.activeElement;
+      if (el instanceof HTMLInputElement && el.type === "number" && el === e.target) {
+        el.blur();
+      }
+    };
+    document.addEventListener("wheel", onWheel, { passive: true });
+    return () => document.removeEventListener("wheel", onWheel);
+  }, []);
+}
+
 export default function App() {
+  useNoWheelOnNumbers();
+
   return (
     <Router>
       <NotifyProvider>
