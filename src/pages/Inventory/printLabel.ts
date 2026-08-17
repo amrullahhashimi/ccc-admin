@@ -98,10 +98,10 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
         font-family: Arial, Helvetica, sans-serif;
         overflow: hidden;
     }
-    /* Wraps to a second line rather than truncating; the script below then
-       shrinks it until both lines fit this box. */
+    /* Height is left to the content: one line stays one line, and the script
+       below shrinks the font so this never runs past two. */
     .top { font-size: calc(14pt * var(--s)); font-weight: 700; line-height: 1.1;
-        width: 100%; height: calc(0.36in * var(--s)); overflow: hidden;
+        width: 100%; flex: 0 0 auto; overflow: hidden;
         overflow-wrap: anywhere; }
     .barcode { display: flex; flex-direction: column; align-items: center;
         width: 100%; flex: 1 1 auto; min-height: 0; }
@@ -142,17 +142,29 @@ export function printUnitLabel(product: Product, unit: ProductUnit, store?: Stor
       svg.removeAttribute("height");
     }
 
-    // Shrink the top line until it fits its box, so a long name wraps to a
-    // second line instead of being cut off.
-    var top = document.querySelector(".top");
-    var size = parseFloat(getComputedStyle(top).fontSize);
-    for (var i = 0; i < 40 && top.scrollHeight > top.clientHeight && size > 4; i++) {
-      size -= 0.5;
-      top.style.fontSize = size + "px";
+    // Cap an element at maxLines by shrinking its font, never by cutting text.
+    // line-height is unitless in the CSS above, so the computed value tracks
+    // each smaller font size and the line budget shrinks with it.
+    function fitLines(el, maxLines) {
+      if (!el) return;
+      var size = parseFloat(getComputedStyle(el).fontSize);
+      for (var i = 0; i < 80; i++) {
+        var lh = parseFloat(getComputedStyle(el).lineHeight) || size * 1.1;
+        if (el.scrollHeight <= lh * maxLines + 0.5) break;
+        size -= 0.25;
+        if (size < 4) break;
+        el.style.fontSize = size + "px";
+      }
     }
 
+    // Must run after layout exists — measuring while the document is still
+    // being written reports zero heights and silently skips the shrink.
     window.onafterprint = () => window.close();
-    setTimeout(() => { window.focus(); window.print(); }, 250);
+    setTimeout(() => {
+      fitLines(document.querySelector(".top"), 2);
+      window.focus();
+      window.print();
+    }, 250);
   </script>
 </body>
 </html>`);
