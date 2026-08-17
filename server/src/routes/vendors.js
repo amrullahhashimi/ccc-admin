@@ -78,6 +78,22 @@ module.exports = (prisma, requireRole) => {
     try {
       const data = shape(req.body);
       if (!data.name) return res.status(400).json({ error: "Vendor name is required." });
+
+      // Removing a vendor that supplies products only archives it (see DELETE
+      // below), and [storeId, name] stays unique — so re-adding that name hit a
+      // duplicate error about a row the list doesn't show. Bring the archived
+      // one back instead, carrying over whatever was just typed.
+      const archived = await prisma.vendor.findFirst({
+        where: { ...scope(req), name: data.name, active: false },
+      });
+      if (archived) {
+        const revived = await prisma.vendor.update({
+          where: { id: archived.id },
+          data: { ...data, active: true },
+        });
+        return res.status(201).json(revived);
+      }
+
       const created = await prisma.vendor.create({ data: { ...data, ...stamp(req) } });
       res.status(201).json(created);
     } catch (err) {

@@ -91,6 +91,15 @@ module.exports = (prisma, requireRole) => {
       }
 
       const clash = await prisma.category.findFirst({ where: { name, parentId, ...scope(req) } });
+      // A category holding products is archived rather than deleted, so the
+      // name it clashes with may be one nobody can see. Revive that instead.
+      if (clash && clash.active === false) {
+        const revived = await prisma.category.update({
+          where: { id: clash.id },
+          data: { active: true },
+        });
+        return res.status(201).json(revived);
+      }
       if (clash) {
         return res.status(409).json({
           error: parentId

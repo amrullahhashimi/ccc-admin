@@ -25,6 +25,21 @@ module.exports = (prisma, requireRole) => {
       if (!name) return res.status(400).json({ error: "Brand name is required." });
 
       const notes = String(req.body?.notes ?? "").trim() || null;
+
+      // Same as vendors: a brand still on products is archived, not deleted,
+      // and keeps its name reserved. Revive it rather than reporting a clash
+      // with a row that isn't in the list.
+      const archived = await prisma.brand.findFirst({
+        where: { ...scope(req), name, active: false },
+      });
+      if (archived) {
+        const revived = await prisma.brand.update({
+          where: { id: archived.id },
+          data: { notes, active: true },
+        });
+        return res.status(201).json(revived);
+      }
+
       const created = await prisma.brand.create({ data: { name, notes, ...stamp(req) } });
       res.status(201).json(created);
     } catch (err) {
