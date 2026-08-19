@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Chart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 import {
@@ -8,8 +8,10 @@ import {
   type PerformanceReport,
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useStore } from "../../context/StoreContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useNotify } from "../../components/ui/notify";
+import { printChart } from "./printChart";
 
 /**
  * The shop's end-of-day takings log, and what it adds up to.
@@ -25,6 +27,14 @@ const labelClass = "mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 
 const cardClass =
   "rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
+
+/** How the daily figures can be drawn. Same numbers either way. */
+const SHAPES = [
+  { value: "area" as const, label: "Lines" },
+  { value: "bar" as const, label: "Bars" },
+];
+
+type Shape = (typeof SHAPES)[number]["value"];
 
 /**
  * One fixed colour per payment type, assigned down the list the API returns —
@@ -79,6 +89,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 export default function PerformancePage() {
   const { can } = useAuth();
   const { theme } = useTheme();
+  const { store } = useStore();
   const notify = useNotify();
   const mayDelete = can("OWNER", "MANAGER");
 
@@ -99,6 +110,8 @@ export default function PerformancePage() {
     note: "",
   });
   const [saving, setSaving] = useState(false);
+  const [shape, setShape] = useState<Shape>("area");
+  const dailyChartRef = useRef<HTMLDivElement>(null);
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -172,6 +185,31 @@ export default function PerformancePage() {
 
   const labelFor = (list: { value: string; label: string }[], v: string) =>
     list.find((t) => t.value === v)?.label ?? v;
+
+  /**
+   * Put the chart on one A4 sheet, landscape.
+   *
+   * The totals travel with it: a printed chart with no figures on it is a
+   * shape, and whoever picks the sheet up later has no way to check it.
+   */
+  function printDaily() {
+    printChart({
+      container: dailyChartRef.current,
+      title: `Taken each day — ${store?.name ?? ""}`.trim().replace(/—s*$/, "").trim(),
+      subtitle: report ? `${dayLabel(report.from)} to ${dayLabel(report.to)}` : undefined,
+      legend: paymentTypes.map((t, i) => ({ label: t.label, color: colors[i % colors.length] })),
+      facts: [
+        { label: "Total taken", value: money(report?.totalCents ?? 0) },
+        { label: "Service", value: money(report?.bySaleType?.SERVICE ?? 0) },
+        { label: "Inventory", value: money(report?.bySaleType?.INVENTORY ?? 0) },
+        { label: "Entries", value: String(report?.count ?? 0) },
+      ],
+      onBlocked: () =>
+        notify.warning("Pop-ups are blocked", {
+          message: "Allow pop-ups for this site to print the chart.",
+        }),
+    });
+  }
 
   /* Daily takings, one line per way of paying. */
   const days = report?.byDay ?? [];
@@ -290,6 +328,31 @@ export default function PerformancePage() {
       y: { formatter: (v: number) => money(Math.round(v * 100)) },
     },
     states: { active: { filter: { type: "none" } } },
+  };
+
+  /**
+   * The same days as columns, in the template's Bar Chart 5 style: thin bars
+   * with rounded tops sitting square on the baseline, grouped rather than
+   * stacked, separated by a gap in the surface colour rather than an outline.
+   *
+   * Everything but the marks is shared with the area view — same colours, same
+   * scale, same axis — so switching between them changes how the figures are
+   * drawn and never what they say.
+   */
+  const dailyBarOptions: ApexOptions = {
+    ...dailyOptions,
+    chart: { ...dailyOptions.chart, type: "bar" },
+    stroke: { show: true, width: 2, colors: ["transparent"] },
+    fill: { type: "solid", opacity: 1 },
+    plotOptions: {
+      bar: {
+        columnWidth: "80%",
+        borderRadius: 4,
+        // Rounded at the top, square where it meets the baseline.
+        borderRadiusApplication: "end",
+      },
+    },
+    markers: { size: 0 },
   };
 
   /* The same money, totalled by payment type — the split the day chart can't state outright. */
@@ -445,16 +508,67 @@ export default function PerformancePage() {
         ) : (
           <div className="space-y-6">
             <div className={`${cardClass} p-6`}>
-              <h2 className="font-semibold text-gray-800 dark:text-white/90">Taken each day</h2>
-              <p className="mb-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                One line per way of paying. Hover a day for the exact figures.
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-gray-800 dark:text-white/90">Taken each day</h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {shape === "area"
+                      ? "One line per way of paying. Hover a day for the exact figures."
+                      : "One bar per way of paying, side by side. Hover a day for the exact figures."}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {/* Two views of one set of figures, so the control names the
+                      drawing rather than pretending to be a different report. */}
+                  <div className="flex rounded-lg border border-gray-300 p-0.5 dark:border-gray-700">
+                    {SHAPES.map((s) => (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => setShape(s.value)}
+                        aria-pressed={shape === s.value}
+                        className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                          shape === s.value
+                            ? "bg-brand-500 text-white"
+                            : "text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={printDaily}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+                  >
+                    Print
+                  </button>
+                </div>
+              </div>
+
               {/* The template's own wrapper: give the plot a wide floor and let
                   it scroll inside the card, rather than squeezing a month of
                   days into whatever width is left. */}
-              <div className="min-w-0 max-w-full overflow-x-auto custom-scrollbar">
-                <div className="min-w-[1000px]">
-                  <Chart options={dailyOptions} series={dailySeries} type="area" height={340} />
+              <div
+                ref={dailyChartRef}
+                className="mt-3 min-w-0 max-w-full overflow-x-auto custom-scrollbar"
+              >
+                {/* Bars need more room than lines: a month split five ways is
+                    155 columns, which at the lines' width measures under 6px
+                    each. The wider floor puts them back to a bar you can see,
+                    and the card scrolls. */}
+                <div className={shape === "bar" ? "min-w-[1700px]" : "min-w-[1000px]"}>
+                  <Chart
+                    // Keyed by shape: ApexCharts animates between types rather
+                    // than rebuilding, and half-morphed bars are worse than a
+                    // clean redraw.
+                    key={shape}
+                    options={shape === "area" ? dailyOptions : dailyBarOptions}
+                    series={dailySeries}
+                    type={shape}
+                    height={340}
+                  />
                 </div>
               </div>
             </div>
