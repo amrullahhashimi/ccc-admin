@@ -55,46 +55,76 @@ async function fetchOrders(cfg, since) {
   return data.elements ?? [];
 }
 
-/** One pass over one store. Errors are contained here so a bad store can't stop the rest. */
-async function pollStore(prisma, store) {
+/**
+ * One pass over one store, returning a report of what it saw.
+ *
+ * `sinceMs` overrides how far back to look, which is what the manual Sync now
+ * button uses to reach past the automatic window and pick up anything the
+ * background pass missed.
+ *
+ * `advanceCursor` is off for a manual run: reaching back further should not
+ * move the marker the automatic pass relies on.
+ */
+async function pollStore(prisma, store, { sinceMs, advanceCursor = true } = {}) {
   const cfg = clover.configForStore(store);
-  if (!clover.isConnected(cfg)) return;
+  if (!clover.isConnected(cfg)) {
+    return { connected: false, scanned: 0, imported: [], skipped: [] };
+  }
 
-  const since = store.cloverPolledAt
-    ? store.cloverPolledAt.getTime() - OVERLAP_MS
-    : Date.now() - FIRST_RUN_MS;
+  const since =
+    sinceMs != null
+      ? Date.now() - sinceMs
+      : store.cloverPolledAt
+        ? store.cloverPolledAt.getTime() - OVERLAP_MS
+        : Date.now() - FIRST_RUN_MS;
 
   // Stamped before the work, not after: an order that arrives while this pass
   // is running would otherwise fall in the gap between reading and saving.
   const startedAt = new Date();
 
   const orders = await fetchOrders(cfg, since);
-  let imported = 0;
+  const imported = [];
+  const skipped = [];
 
   for (const order of orders) {
     try {
       const result = await importOrder({ prisma, store, order });
       if (result.imported) {
-        imported++;
+        imported.push({
+          order: order.id,
+          matched: result.matched,
+          reviewed: result.reviewed,
+        });
         console.log(
           `[clover poll] ${store.name}: order ${order.id} -> sale ${result.reference} ` +
             `(${result.matched} serial${result.matched === 1 ? "" : "s"} matched` +
             `${result.reviewed ? ", needs review" : ""})`
         );
+      } else {
+        skipped.push({ order: order.id, reason: result.reason || "nothing to do" });
       }
     } catch (err) {
       // One unimportable order must not block the ones behind it. It stays
       // unimported, and the overlap means the next pass tries again.
       console.error(`[clover poll] ${store.name}: order ${order.id} failed: ${err.message}`);
+      skipped.push({ order: order.id, reason: err.message });
     }
   }
 
-  await prisma.store.update({
-    where: { id: store.id },
-    data: { cloverPolledAt: startedAt },
-  });
+  if (advanceCursor) {
+    await prisma.store.update({
+      where: { id: store.id },
+      data: { cloverPolledAt: startedAt },
+    });
+  }
 
-  return imported;
+  return {
+    connected: true,
+    since: new Date(since),
+    scanned: orders.length,
+    imported,
+    skipped,
+  };
 }
 
 async function pollOnce(prisma) {

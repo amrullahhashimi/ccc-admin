@@ -54,16 +54,22 @@ async function matchUnit(prisma, storeId, li) {
 /**
  * Import one paid Clover order, or do nothing if it is already in.
  *
- * Returns { imported, reference, matched, reviewed } so the caller can log
- * something useful. Safe to call twice with the same order — the unique
- * cloverOrderId makes a repeat a no-op rather than a duplicate sale.
+ * Returns { imported, reference, matched, reviewed } — or { imported: false,
+ * reason } saying why it was passed over, which is what the sync report shows.
+ * Safe to call twice with the same order: the unique cloverOrderId makes a
+ * repeat a no-op rather than a duplicate sale.
  */
 async function importOrder({ prisma, store, order }) {
-  if (!order?.id) return { imported: false };
-  if (order.paymentState !== "PAID") return { imported: false }; // not money yet
+  if (!order?.id) return { imported: false, reason: "no order id" };
+
+  // An order only becomes a sale once it is paid for. An unpaid one is a
+  // basket still open on the register, and the poller will see it again.
+  if (order.paymentState !== "PAID") {
+    return { imported: false, reason: `not paid yet (${order.paymentState || "unknown"})` };
+  }
 
   const already = await prisma.sale.findUnique({ where: { cloverOrderId: order.id } });
-  if (already) return { imported: false };
+  if (already) return { imported: false, reason: "already imported", reference: order.id };
 
   const lineItems = order.lineItems?.elements ?? [];
   const payments = order.payments?.elements ?? [];

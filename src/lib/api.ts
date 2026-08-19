@@ -697,6 +697,27 @@ export interface MerchantSummary {
   env: CloverEnv;
 }
 
+/** Where the automatic register-sale sync has got to. */
+export interface CloverSyncStatus {
+  connected: boolean;
+  /** When the background pass last ran. Null means it has never run. */
+  lastPolledAt: string | null;
+  intervalSeconds: number;
+  importedTotal: number;
+}
+
+/** What one manual sync pass saw. */
+export interface CloverSyncReport {
+  connected: boolean;
+  since: string;
+  hours: number;
+  /** Orders Clover returned for the window. */
+  scanned: number;
+  imported: { order: string; matched: number; reviewed: boolean }[];
+  /** Orders passed over, each with the reason — the useful half when nothing lands. */
+  skipped: { order: string; reason: string }[];
+}
+
 export const merchant = {
   inventory: (params: { search?: string; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams();
@@ -707,6 +728,11 @@ export const merchant = {
     return request<MerchantInventoryPage>(`/api/clover/inventory${qs ? `?${qs}` : ""}`);
   },
   summary: () => request<MerchantSummary>("/api/clover/inventory/summary"),
+
+  syncStatus: () => request<CloverSyncStatus>("/api/clover/sync"),
+  /** Pull register sales in now, looking back `hours` (default 24, max 168). */
+  syncNow: (hours = 24) =>
+    request<CloverSyncReport>("/api/clover/sync", { method: "POST", ...body({ hours }) }),
 };
 
 /* ----------------------------- sharing ----------------------------- */
