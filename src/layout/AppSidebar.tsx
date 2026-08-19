@@ -31,17 +31,6 @@ const navItems: NavItem[] = [
     path: "/inventory",
   },
   {
-    name: "Merchant inventory",
-    path: "/merchant-inventory",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 7h18v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
-        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-        <path d="M3 12h18" />
-      </svg>
-    ),
-  },
-  {
     name: "Sales",
     path: "/sales",
     icon: (

@@ -31,7 +31,6 @@ import ToolsHome from "./pages/Tools/ToolsHome";
 import ImeiCheckerPage from "./pages/Tools/ImeiCheckerPage";
 import StoreSettingsPage from "./pages/Store/StoreSettingsPage";
 import SharingPage from "./pages/Store/SharingPage";
-import MerchantInventoryPage from "./pages/Store/MerchantInventoryPage";
 import MasterPage from "./pages/Master/MasterPage";
 
 
@@ -94,7 +93,6 @@ export default function App() {
             <Route path="/tools/imei" element={<ImeiCheckerPage />} />
             <Route path="/store" element={<StoreSettingsPage />} />
             <Route path="/store/sharing" element={<SharingPage />} />
-            <Route path="/merchant-inventory" element={<MerchantInventoryPage />} />
             <Route path="/master" element={<MasterPage />} />
 
           </Route>

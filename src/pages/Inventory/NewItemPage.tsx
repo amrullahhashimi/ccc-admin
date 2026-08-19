@@ -28,7 +28,6 @@ export default function NewItemPage() {
     customSku: "",
     brandId: "",
     categoryId: "",
-    vendorId: "",
     cost: "",
     onlinePrice: "",
     salePrice: "",
@@ -123,15 +122,6 @@ export default function NewItemPage() {
               <option value="">—</option>
               {meta?.categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.label ?? c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Vendor</label>
-            <select className={inputClass} value={form.vendorId} onChange={(e) => set("vendorId", e.target.value)}>
-              <option value="">—</option>
-              {meta?.vendors.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
               ))}
             </select>
           </div>

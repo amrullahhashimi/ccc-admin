@@ -9,6 +9,7 @@ import {
 } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useNotify } from "../../components/ui/notify";
+import RegisterSalesCard from "./RegisterSalesCard";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -199,7 +200,7 @@ function CloverCard({ mayEdit }: { mayEdit: boolean }) {
     const ok = await notify.confirm({
       title: "Disconnect Clover?",
       message:
-        "The Merchant inventory tab and order sync from the register stop working until you connect again. Nothing on the Clover account itself is changed.",
+        "Sales rung up on the register stop coming through until you connect again. Nothing on the Clover account itself is changed.",
       confirmText: "Disconnect",
       variant: "error",
     });
@@ -227,8 +228,8 @@ function CloverCard({ mayEdit }: { mayEdit: boolean }) {
           <h2 className="font-semibold text-gray-800 dark:text-white/90">Connect to Clover</h2>
           <p className="mt-1 max-w-xl text-sm text-gray-500 dark:text-gray-400">
             Links this store to your Clover merchant account. Enter these once and the app stays
-            connected — it reads and writes the account's data from then on, including the
-            Merchant inventory tab.
+            connected — serials you add are pushed to Clover, and sales rung up on the register
+            come back here.
           </p>
         </div>
         <CloverPill status={status} />
@@ -542,6 +543,7 @@ export default function StoreSettingsPage() {
     {/* Sits outside the form above: it saves itself, and Enter in one of its
         fields must not trigger the page's Save settings. */}
     <CloverCard mayEdit={mayEdit} />
+    <RegisterSalesCard />
     </div>
   );
 }

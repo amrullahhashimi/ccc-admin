@@ -656,45 +656,7 @@ export const stores = {
   disconnectClover: () => request<CloverStatus>("/api/stores/clover", { method: "DELETE" }),
 };
 
-/* ------------------------- merchant (live Clover) ------------------------- */
-
-/** One item as it exists in the Clover account right now — nothing is stored locally. */
-export interface MerchantItem {
-  id: string;
-  name: string;
-  /** Barcode or SKU, whichever the item carries. */
-  code: string | null;
-  priceCents: number | null;
-  /** Priced at the register rather than fixed, so a 0 price isn't free. */
-  variablePrice: boolean;
-  /** null means Clover isn't tracking stock for this item. */
-  quantity: number | null;
-  categories: string[];
-  hidden: boolean;
-  available: boolean;
-  modifiedAt: number | null;
-}
-
-export interface MerchantInventoryPage {
-  items: MerchantItem[];
-  offset: number;
-  limit: number;
-  /** Clover returns no total, so paging is "was that a full page?". */
-  hasMore: boolean;
-  merchantId: string;
-  env: CloverEnv;
-}
-
-export interface MerchantSummary {
-  total: number;
-  /** How many have stock tracking switched on. */
-  tracked: number;
-  inStock: number;
-  /** False if the count hit its page ceiling before reaching the end. */
-  complete: boolean;
-  merchantId: string;
-  env: CloverEnv;
-}
+/* ------------------------ register sales (Clover) ------------------------ */
 
 /** Where the automatic register-sale sync has got to. */
 export interface CloverSyncStatus {
@@ -720,15 +682,6 @@ export interface CloverSyncReport {
 }
 
 export const merchant = {
-  inventory: (params: { search?: string; limit?: number; offset?: number } = {}) => {
-    const q = new URLSearchParams();
-    if (params.search) q.set("search", params.search);
-    if (params.limit != null) q.set("limit", String(params.limit));
-    if (params.offset != null) q.set("offset", String(params.offset));
-    const qs = q.toString();
-    return request<MerchantInventoryPage>(`/api/clover/inventory${qs ? `?${qs}` : ""}`);
-  },
-  summary: () => request<MerchantSummary>("/api/clover/inventory/summary"),
 
   syncStatus: () => request<CloverSyncStatus>("/api/clover/sync"),
   /** Pull register sales in now, looking back `hours` (default 24, max 168). */
