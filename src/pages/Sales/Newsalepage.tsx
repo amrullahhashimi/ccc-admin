@@ -7,6 +7,7 @@ import {
   meta as metaApi,
   money,
   products as productsApi,
+  saleRef,
   sales as salesApi,
   type Customer,
   type Meta,
@@ -241,7 +242,7 @@ export default function NewSalePage() {
       .map((p) => `<tr><td>${escapeHtml(p.method)}</td><td style="text-align:right">${money(p.amountCents)}</td></tr>`)
       .join("");
     const paid = (sale.payments ?? []).reduce((s, p) => s + p.amountCents, 0);
-    win.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>Receipt #${sale.number}</title>
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>Receipt ${saleRef(sale)}</title>
 <style>
   body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;padding:12px;max-width:320px;margin:0 auto}
   h1{font-size:15px;margin:0 0 2px}
@@ -253,7 +254,7 @@ export default function NewSalePage() {
 </style></head><body>
   <h1>${escapeHtml(store?.name ?? "Canadian Cellular Communications")}</h1>
   <div class="muted">${escapeHtml(loc?.name ?? "")}</div>
-  <div class="muted">Sale #${sale.number} · ${new Date(sale.createdAt).toLocaleString()}</div>
+  <div class="muted">Sale ${saleRef(sale)} · ${new Date(sale.createdAt).toLocaleString()}</div>
   <div class="muted">Customer: ${escapeHtml(custName(sale.customer as Customer) || "—")}</div>
   <div class="line"></div>
   <table>${rows}</table>
@@ -285,7 +286,7 @@ export default function NewSalePage() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-success-50 text-success-600 dark:bg-success-500/15">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
           </div>
-          <h1 className="text-lg font-semibold text-gray-800 dark:text-white/90">Sale #{done.number} complete</h1>
+          <h1 className="text-lg font-semibold text-gray-800 dark:text-white/90">Sale {saleRef(done)} complete</h1>
           <p className="mt-1 text-sm text-gray-500">
             {money(done.totalCents)} total · {money(paid)} paid
             {done.totalCents - paid > 0 && ` · ${money(done.totalCents - paid)} balance`}

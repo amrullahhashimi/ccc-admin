@@ -54,7 +54,7 @@ async function matchUnit(prisma, storeId, li) {
 /**
  * Import one paid Clover order, or do nothing if it is already in.
  *
- * Returns { imported, saleNumber, matched, reviewed } so the caller can log
+ * Returns { imported, reference, matched, reviewed } so the caller can log
  * something useful. Safe to call twice with the same order — the unique
  * cloverOrderId makes a repeat a no-op rather than a duplicate sale.
  */
@@ -110,16 +110,10 @@ async function importOrder({ prisma, store, order }) {
     : [{ amountCents: totalCents, method: "CARD", reference: null }];
 
   const sale = await prisma.$transaction(async (tx) => {
-    const last = await tx.sale.findFirst({
-      where: { storeId: store.id },
-      orderBy: { number: "desc" },
-      select: { number: true },
-    });
-    const number = (last?.number ?? 1000) + 1;
-
     const created = await tx.sale.create({
       data: {
-        number,
+        // No shop sale number: this sale is the Clover order, and
+        // cloverOrderId below is its identity. See Sale.number in the schema.
         storeId: store.id,
         source: "CLOVER",
         cloverOrderId: order.id,
@@ -158,7 +152,7 @@ async function importOrder({ prisma, store, order }) {
 
   return {
     imported: true,
-    saleNumber: sale.number,
+    reference: sale.cloverOrderId,
     matched: soldUnits.length,
     reviewed: needsReview,
   };

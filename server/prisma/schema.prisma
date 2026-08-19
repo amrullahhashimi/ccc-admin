@@ -367,7 +367,11 @@ model Customer {
 
 model Ticket {
   id     String @id @default(cuid())
-  number Int // assigned in code (max + 1 within the store)
+  /// The shop's own sale number, assigned in code (max + 1 within the store).
+  /// Null for a sale rung up on the Clover register: that sale already has an
+  /// identity in cloverOrderId, and minting a second one would both duplicate
+  /// it and push the shop's own numbering along for a sale it didn't ring up.
+  number Int?
 
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])

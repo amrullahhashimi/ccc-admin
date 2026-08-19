@@ -1,5 +1,6 @@
 const express = require("express");
 const { scope, stamp, assertStore, storeId } = require("../tenancy");
+const { saleRef } = require("../sale-ref");
 const cloverStore = require("../clover-store");
 const cloverConfig = require("../clover-config");
 
@@ -38,6 +39,9 @@ module.exports = (prisma, requireRole) => {
           { customer: { lastName: { contains: q } } },
           { customer: { phone: { contains: q } } },
           ...(Number.isFinite(asNum) ? [{ number: asNum }] : []),
+          // A Clover sale is shown by its order id rather than a number, so
+          // that is what someone reading one off a receipt will type in.
+          { cloverOrderId: { contains: q } },
         ];
       }
       const sales = await prisma.sale.findMany({
@@ -246,7 +250,7 @@ module.exports = (prisma, requireRole) => {
                 productId: item.productId,
                 quantity: item.quantity,
                 costCents: item.costCents,
-                note: `Void of sale #${sale.number}`,
+                note: `Void of sale ${saleRef(sale)}`,
               },
             });
           }
@@ -351,7 +355,7 @@ module.exports = (prisma, requireRole) => {
       const result = await chargeOnClover({
         store,
         amountCents,
-        externalId: `sale-${sale.number}-${Date.now()}`,
+        externalId: `sale-${saleRef(sale)}-${Date.now()}`,
       });
 
       await prisma.payment.create({

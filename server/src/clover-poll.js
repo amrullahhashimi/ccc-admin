@@ -44,8 +44,7 @@ async function fetchOrders(cfg, since) {
   url.searchParams.set("filter", `modifiedTime>${since}`);
   url.searchParams.set("expand", "lineItems,payments");
   url.searchParams.set("limit", String(PAGE_SIZE));
-  // Oldest first, so a batch is imported in the order it happened and the
-  // sale numbers this app assigns run the same way.
+  // Oldest first, so a batch is imported in the order the sales happened.
   url.searchParams.set("orderBy", "modifiedTime ASC");
 
   const resp = await fetch(url, {
@@ -78,7 +77,7 @@ async function pollStore(prisma, store) {
       if (result.imported) {
         imported++;
         console.log(
-          `[clover poll] ${store.name}: order ${order.id} -> sale #${result.saleNumber} ` +
+          `[clover poll] ${store.name}: order ${order.id} -> sale ${result.reference} ` +
             `(${result.matched} serial${result.matched === 1 ? "" : "s"} matched` +
             `${result.reviewed ? ", needs review" : ""})`
         );

@@ -141,7 +141,10 @@ export interface SaleItem {
 
 export interface Sale {
   id: string;
-  number: number;
+  /** The shop's own number. Null for a sale rung up on the Clover register. */
+  number: number | null;
+  /** Set when the sale came from Clover — then it is the sale's identity. */
+  cloverOrderId?: string | null;
   customerId?: string | null;
   customer?: Customer | null;
   userId?: string | null;
@@ -159,6 +162,19 @@ export interface Sale {
   payments?: SalePayment[];
   _count?: { items: number };
 }
+
+/**
+ * How a sale is named anywhere it is shown.
+ *
+ * A sale raised here gets the shop's running number; one rung up on the
+ * Clover register keeps the identity Clover gave it, so the receipt, the
+ * register and this app all read the same. Mirrored in server/src/sale-ref.js.
+ */
+export const saleRef = (sale: {
+  number?: number | null;
+  cloverOrderId?: string | null;
+  id?: string;
+}): string => (sale.number != null ? `#${sale.number}` : sale.cloverOrderId || sale.id || "");
 
 export interface SaleLineInput {
   productId?: string | null;

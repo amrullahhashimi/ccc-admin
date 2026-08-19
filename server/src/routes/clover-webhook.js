@@ -61,7 +61,7 @@ module.exports = (prisma) => {
     const order = await fetchOrder(store, merchantId, orderId);
     const result = await importOrder({ prisma, store, order });
     if (result.imported) {
-      console.log(`[clover webhook] order ${orderId} -> sale #${result.saleNumber}`);
+      console.log(`[clover webhook] order ${orderId} -> sale ${result.reference}`);
     }
   }
 

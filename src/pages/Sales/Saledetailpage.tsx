@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { money, sales as salesApi, type Customer, type Sale } from "../../lib/api";
+import { money, saleRef, sales as salesApi, type Customer, type Sale } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useStore } from "../../context/StoreContext";
 import { useNotify } from "../../components/ui/notify";
@@ -88,7 +88,7 @@ export default function SaleDetailPage() {
 
   const voidSale = async () => {
     const ok = await notify.confirm({
-      title: `Void sale #${sale.number}?`,
+      title: `Void sale ${saleRef(sale)}?`,
       message: "Stock will be returned and this can't be undone.",
       confirmText: "Void sale",
       variant: "error",
@@ -97,7 +97,7 @@ export default function SaleDetailPage() {
     setBusy(true);
     try {
       await salesApi.void(sale.id);
-      notify.success(`Sale #${sale.number} voided.`);
+      notify.success(`Sale ${saleRef(sale)} voided.`);
       await load();
     } catch (err) {
       notify.error("Could not void.", {
@@ -120,11 +120,11 @@ export default function SaleDetailPage() {
     const payRows = (sale.payments ?? [])
       .map((p) => `<tr><td>${escapeHtml(p.method)}</td><td style="text-align:right">${money(p.amountCents)}</td></tr>`)
       .join("");
-    win.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>Receipt #${sale.number}</title>
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>Receipt ${saleRef(sale)}</title>
 <style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;padding:12px;max-width:320px;margin:0 auto}h1{font-size:15px;margin:0 0 2px}.muted{color:#666;font-size:11px}table{width:100%;border-collapse:collapse;margin-top:8px}td{padding:2px 0}.line{border-top:1px dashed #999;margin:8px 0}.tot td{font-weight:bold}</style></head><body>
   <h1>${escapeHtml(store?.name ?? "Canadian Cellular Communications")}</h1>
   <div class="muted">${escapeHtml(sale.location?.name ?? "")}</div>
-  <div class="muted">Sale #${sale.number} · ${new Date(sale.createdAt).toLocaleString()}</div>
+  <div class="muted">Sale ${saleRef(sale)} · ${new Date(sale.createdAt).toLocaleString()}</div>
   <div class="muted">Customer: ${escapeHtml(custName(sale.customer))}</div>
   <div class="line"></div><table>${rows}</table><div class="line"></div>
   <table>
@@ -150,7 +150,7 @@ export default function SaleDetailPage() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Sale #{sale.number}</h1>
+            <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Sale {saleRef(sale)}</h1>
             {statusBadge(sale.status)}
             {sale.source === "CLOVER" && (
               <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">Clover</span>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { money, sales as salesApi, type Sale } from "../../lib/api";
+import { money, saleRef, sales as salesApi, type Sale } from "../../lib/api";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90";
@@ -91,7 +91,7 @@ export default function SalesPage() {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {rows.map((s) => (
                   <tr key={s.id} onClick={() => navigate(`/sales/${s.id}`)} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                    <td className="px-5 py-3 text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">#{s.number}</td>
+                    <td className="px-5 py-3 text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">{saleRef(s)}</td>
                     <td className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">{custName(s.customer)}</td>
                     <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">{s._count?.items ?? "—"}</td>
                     <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-800 dark:text-white/90">{money(s.totalCents)}</td>
