@@ -86,6 +86,7 @@ app.use("/api/stores", requireLogin, requireStore, require("./routes/stores")(pr
 app.use("/api/sharing", requireLogin, requireStore, require("./routes/sharing")(prisma, requireRole));
 app.use("/api/master", requireLogin, require("./routes/master")(prisma));
 app.use("/api/tools", requireLogin, requireStore, require("./routes/tools")(prisma));
+app.use("/api/clover", requireLogin, requireStore, require("./routes/clover-merchant")(prisma));
 app.use("/api/track", require("./routes/track")(prisma));
 app.use("/oauth", require("./routes/clover")());
 app.use("/oauth", require("./routes/clover-webhook")(prisma));
@@ -116,6 +117,9 @@ app.use((err, req, res, _next) => {
 
 // Anything that still escapes gets logged rather than killing the process.
 process.on("unhandledRejection", (err) => console.error("Unhandled rejection:", err));
+
+// Watch the connected Clover accounts for sales rung up on the register.
+require("./clover-poll").startPolling(prisma);
 
 app.listen(PORT, () => {
   console.log(`CCC Admin → port ${PORT}`);

@@ -70,6 +70,25 @@ export interface ProductUnit {
   note?: string | null;
   vendorId?: string | null;
   vendor?: { id: string; name: string } | null;
+  /** The Clover item this serial became, or null if it was never pushed. */
+  cloverItemId?: string | null;
+  /** The sale this serial went out on, when it sold through the Clover register. */
+  saleId?: string | null;
+  sale?: { id: string; number: number } | null;
+}
+
+/**
+ * What happened when serials were mirrored to Clover.
+ * `connected: false` means the store has no Clover account set up, which is
+ * not a failure — there was simply nothing to sync with.
+ */
+export interface CloverSyncResult {
+  connected: boolean;
+  /** Which way the sync went, for the message shown if part of it fails. */
+  action: "added" | "updated" | "removed" | "sold" | "returned";
+  /** How many serials made it through. */
+  count: number;
+  failed: { serial: string; error: string }[];
 }
 
 export interface Product {
@@ -304,7 +323,10 @@ export const products = {
   get: (id: string) => request<Product>(`/api/products/${id}`),
   // Money goes out as dollars (cost, onlinePrice, salePrice); the API stores cents.
   create: (data: Record<string, unknown> & { units?: UnitInput[] }) =>
-    request<Product>("/api/products", { method: "POST", ...body(data) }),
+    request<Product & { clover: CloverSyncResult }>("/api/products", {
+      method: "POST",
+      ...body(data),
+    }),
   update: (id: string, data: Record<string, unknown>) =>
     request<Product>(`/api/products/${id}`, { method: "PATCH", ...body(data) }),
   archive: (id: string) => request<{ ok: true }>(`/api/products/${id}`, { method: "DELETE" }),
@@ -312,15 +334,30 @@ export const products = {
     request<{ ok: true }>(`/api/products/${id}/restore`, { method: "POST" }),
 
   addUnits: (productId: string, units: UnitInput[]) =>
-    request<ProductUnit[]>(`/api/products/${productId}/units`, { method: "POST", ...body({ units }) }),
+    request<{ units: ProductUnit[]; clover: CloverSyncResult }>(
+      `/api/products/${productId}/units`,
+      { method: "POST", ...body({ units }) }
+    ),
   updateUnit: (unitId: string, data: Partial<UnitInput> & { status?: string }) =>
-    request<ProductUnit>(`/api/products/units/${unitId}`, { method: "PATCH", ...body(data) }),
+    request<{ unit: ProductUnit; clover: CloverSyncResult }>(
+      `/api/products/units/${unitId}`,
+      { method: "PATCH", ...body(data) }
+    ),
+  /** Removing a serial here deletes its Clover item too. */
   removeUnit: (unitId: string) =>
-    request<{ ok: true }>(`/api/products/units/${unitId}`, { method: "DELETE" }),
+    request<{ ok: true; clover: CloverSyncResult }>(`/api/products/units/${unitId}`, {
+      method: "DELETE",
+    }),
+  /** Selling keeps the Clover item and takes one off its stock. */
   sellUnit: (unitId: string) =>
-    request<{ ok: true }>(`/api/products/units/${unitId}/sell`, { method: "POST" }),
+    request<{ ok: true; clover: CloverSyncResult }>(`/api/products/units/${unitId}/sell`, {
+      method: "POST",
+    }),
+  /** Returning puts the Clover count back, undoing what the sale took off. */
   returnUnit: (unitId: string) =>
-    request<{ ok: true }>(`/api/products/units/${unitId}/return`, { method: "POST" }),
+    request<{ ok: true; clover: CloverSyncResult }>(`/api/products/units/${unitId}/return`, {
+      method: "POST",
+    }),
   addStock: (productId: string, data: { quantity: number; cost?: string; vendorId?: string | null; note?: string }) =>
     request<StockEntry>(`/api/products/${productId}/stock`, { method: "POST", ...body(data) }),
   removeStockEntry: (entryId: string) =>
@@ -557,6 +594,8 @@ export interface Store {
   labelHeightMm: number;
   active: boolean;
   createdAt: string;
+  /** Last four characters of the saved Clover token — the token itself never leaves the server. */
+  cloverTokenHint?: string | null;
 }
 
 /** One upload slot: where the logo appears and what size it should be. */
@@ -568,11 +607,90 @@ export interface LogoSlot {
   maxKb: number;
 }
 
+export type CloverEnv = "production" | "sandbox";
+
+/** What Store settings → Connect to Clover shows. The API token is never included. */
+export interface CloverStatus {
+  env: CloverEnv;
+  merchantId: string | null;
+  /** Masked last four of the saved token, or null when nothing is saved. */
+  tokenHint: string | null;
+  verifiedAt: string | null;
+  connected: boolean;
+  /** Only on save — the account name Clover confirmed. */
+  merchantName?: string | null;
+}
+
+export interface CloverForm {
+  env: CloverEnv;
+  merchantId: string;
+  /** Blank leaves the saved token alone. */
+  token: string;
+}
+
 export const stores = {
   settings: () => request<Store>("/api/stores/settings"),
   logoSlots: () => request<Record<string, LogoSlot>>("/api/stores/logo-slots"),
   saveSettings: (data: Record<string, unknown>) =>
     request<Store>("/api/stores/settings", { method: "PATCH", ...body(data) }),
+
+  clover: () => request<CloverStatus>("/api/stores/clover"),
+  /** Saves only if Clover accepts the credentials, so connected means it works. */
+  saveClover: (data: CloverForm) =>
+    request<CloverStatus>("/api/stores/clover", { method: "PUT", ...body(data) }),
+  disconnectClover: () => request<CloverStatus>("/api/stores/clover", { method: "DELETE" }),
+};
+
+/* ------------------------- merchant (live Clover) ------------------------- */
+
+/** One item as it exists in the Clover account right now — nothing is stored locally. */
+export interface MerchantItem {
+  id: string;
+  name: string;
+  /** Barcode or SKU, whichever the item carries. */
+  code: string | null;
+  priceCents: number | null;
+  /** Priced at the register rather than fixed, so a 0 price isn't free. */
+  variablePrice: boolean;
+  /** null means Clover isn't tracking stock for this item. */
+  quantity: number | null;
+  categories: string[];
+  hidden: boolean;
+  available: boolean;
+  modifiedAt: number | null;
+}
+
+export interface MerchantInventoryPage {
+  items: MerchantItem[];
+  offset: number;
+  limit: number;
+  /** Clover returns no total, so paging is "was that a full page?". */
+  hasMore: boolean;
+  merchantId: string;
+  env: CloverEnv;
+}
+
+export interface MerchantSummary {
+  total: number;
+  /** How many have stock tracking switched on. */
+  tracked: number;
+  inStock: number;
+  /** False if the count hit its page ceiling before reaching the end. */
+  complete: boolean;
+  merchantId: string;
+  env: CloverEnv;
+}
+
+export const merchant = {
+  inventory: (params: { search?: string; limit?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (params.search) q.set("search", params.search);
+    if (params.limit != null) q.set("limit", String(params.limit));
+    if (params.offset != null) q.set("offset", String(params.offset));
+    const qs = q.toString();
+    return request<MerchantInventoryPage>(`/api/clover/inventory${qs ? `?${qs}` : ""}`);
+  },
+  summary: () => request<MerchantSummary>("/api/clover/inventory/summary"),
 };
 
 /* ----------------------------- sharing ----------------------------- */

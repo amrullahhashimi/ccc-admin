@@ -1,5 +1,7 @@
 const express = require("express");
 const cloverStore = require("../clover-store");
+const cloverConfig = require("../clover-config");
+const { importOrder } = require("../clover-orders");
 
 /**
  * Inbound sync: a sale rung up directly on the Clover register (not through
@@ -27,110 +29,40 @@ const cloverStore = require("../clover-store");
 module.exports = (prisma) => {
   const router = express.Router();
 
-  const apiBase = () => process.env.CLOVER_API_BASE || "https://apisandbox.dev.clover.com";
+  /**
+   * The store that connected this merchant account. cloverMerchantId is unique,
+   * so the payload's merchant id is enough to know whose order this is — and
+   * whose credentials may read it.
+   */
+  const storeForMerchant = (merchantId) =>
+    prisma.store.findFirst({ where: { cloverMerchantId: merchantId } });
 
-  async function fetchOrder(merchantId, orderId) {
-    const token = await cloverStore.getAccessToken();
+  async function fetchOrder(store, merchantId, orderId) {
+    const cfg = cloverConfig.configForStore(store);
+    // A shop still configured through /oauth/connect has no token on its row.
+    const token = cfg.token || (await cloverStore.getAccessToken());
     const resp = await fetch(
-      `${apiBase()}/v3/merchants/${merchantId}/orders/${orderId}?expand=lineItems,payments`,
+      `${cfg.apiBase}/v3/merchants/${merchantId}/orders/${orderId}?expand=lineItems,payments`,
       { headers: { authorization: `Bearer ${token}`, accept: "application/json" } }
     );
     if (!resp.ok) throw new Error(`Clover order fetch failed (${resp.status}).`);
     return resp.json();
   }
 
-  /** Clover's unitQty is fixed-point, scaled by 1000 (1000 = qty 1). */
-  const qtyOf = (li) => {
-    const n = Math.round((li.unitQty ?? 1000) / 1000);
-    return Number.isFinite(n) && n > 0 ? n : 1;
-  };
-
+  /**
+   * Fetch the order and hand it to the shared importer — the same one the
+   * poller uses, so a shop on webhooks and a shop on polling get identical
+   * results and there is only one place to fix a matching bug.
+   */
   async function processCloverOrder(merchantId, orderId) {
-    const already = await prisma.sale.findUnique({ where: { cloverOrderId: orderId } });
-    if (already) return; // already synced — webhook retries/duplicates are a no-op
+    const store = await storeForMerchant(merchantId);
+    if (!store) return; // no store has connected this account — nothing to file it under
 
-    const order = await fetchOrder(merchantId, orderId);
-    if (order.paymentState !== "PAID") return; // wait for the UPDATE event that lands on PAID
-
-    const lineItems = order.lineItems?.elements ?? [];
-    const payments = order.payments?.elements ?? [];
-
-    let needsReview = false;
-    const lineData = [];
-    const unitIdsToMark = [];
-
-    for (const li of lineItems) {
-      const note = String(li.note ?? "").trim();
-      const quantity = qtyOf(li);
-      const unitPriceCents = Math.round(li.price ?? 0);
-
-      const unit = note
-        ? await prisma.productUnit.findFirst({ where: { serial: note }, include: { product: true } })
-        : null;
-
-      if (unit && unit.status === "IN_STOCK") {
-        unitIdsToMark.push(unit.id);
-        lineData.push({
-          productId: unit.productId,
-          name: unit.product.name,
-          quantity,
-          unitPriceCents,
-          costCents: unit.product.costCents,
-        });
-      } else if (unit) {
-        // Serial matched but the unit isn't sellable (already sold/reserved elsewhere).
-        needsReview = true;
-        lineData.push({
-          productId: null,
-          name: `${li.name || "Item"} (serial ${note} already ${unit.status.toLowerCase()})`,
-          quantity,
-          unitPriceCents,
-          costCents: 0,
-        });
-      } else {
-        // No note, or it didn't match any serial on file.
-        needsReview = true;
-        lineData.push({
-          productId: null,
-          name: note ? `${li.name || "Item"} (serial "${note}" not found)` : li.name || "Clover item",
-          quantity,
-          unitPriceCents,
-          costCents: 0,
-        });
-      }
+    const order = await fetchOrder(store, merchantId, orderId);
+    const result = await importOrder({ prisma, store, order });
+    if (result.imported) {
+      console.log(`[clover webhook] order ${orderId} -> sale #${result.saleNumber}`);
     }
-
-    const totalCents = Math.round(order.total ?? 0);
-    const subtotalCents = lineData.reduce((s, l) => s + l.unitPriceCents * l.quantity, 0);
-    const taxCents = Math.max(0, totalCents - subtotalCents);
-
-    const pays = payments.length
-      ? payments.map((p) => ({ amountCents: Math.round(p.amount ?? 0), method: "CARD", reference: p.id || null }))
-      : [{ amountCents: totalCents, method: "CARD", reference: null }];
-
-    await prisma.$transaction(async (tx) => {
-      for (const unitId of unitIdsToMark) {
-        await tx.productUnit.update({ where: { id: unitId }, data: { status: "SOLD" } });
-      }
-
-      const last = await tx.sale.findFirst({ orderBy: { number: "desc" }, select: { number: true } });
-      const number = (last?.number ?? 1000) + 1;
-
-      await tx.sale.create({
-        data: {
-          number,
-          source: "CLOVER",
-          cloverOrderId: orderId,
-          status: "PAID",
-          needsReview,
-          subtotalCents,
-          taxCents,
-          totalCents,
-          items: { create: lineData },
-          payments: { create: pays },
-        },
-      });
-    });
   }
 
   // server.js already mounts express.json() globally before this router.

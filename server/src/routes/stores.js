@@ -1,6 +1,8 @@
 const express = require("express");
 const { ah } = require("../async-route");
 const { storeId } = require("../tenancy");
+const clover = require("../clover-config");
+const { maskToken } = clover;
 
 /**
  * A store's own settings: name, branding, contact details, label stock and the
@@ -88,6 +90,15 @@ function shapeSettings(body) {
   return d;
 }
 
+/**
+ * A store row safe to send to the browser. Only the Clover API token needs
+ * hiding; everything else on the row is the shop's own settings.
+ */
+function publicStore(store) {
+  const { cloverApiToken, ...rest } = store;
+  return { ...rest, cloverTokenHint: maskToken(cloverApiToken) };
+}
+
 module.exports = (prisma, requireRole) => {
   const router = express.Router();
 
@@ -96,7 +107,7 @@ module.exports = (prisma, requireRole) => {
   router.get("/settings", ah(async (req, res) => {
     const store = await prisma.store.findUnique({ where: { id: storeId(req) } });
     if (!store) return res.status(404).json({ error: "Store not found." });
-    res.json(store);
+    res.json(publicStore(store));
   }));
 
   /** So the settings page draws the same slots the server accepts. */
@@ -128,10 +139,97 @@ module.exports = (prisma, requireRole) => {
       }
 
       const updated = await prisma.store.update({ where: { id: storeId(req) }, data });
-      res.json(updated);
+      res.json(publicStore(updated));
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
+  }));
+
+
+  /* --------------------------- connect to Clover --------------------------- */
+
+  /**
+   * What the settings section draws itself from. The API token is the one
+   * field that never comes back — only its last four characters, which is
+   * enough for the shop to recognise which token is saved.
+   */
+  function cloverStatus(store) {
+    const cfg = clover.configForStore(store);
+    return {
+      env: cfg.env,
+      merchantId: store.cloverMerchantId ?? null,
+      tokenHint: clover.maskToken(store.cloverApiToken),
+      verifiedAt: store.cloverVerifiedAt ?? null,
+      connected: clover.isConnected(cfg),
+    };
+  }
+
+  router.get("/clover", ah(async (req, res) => {
+    const store = await prisma.store.findUnique({ where: { id: storeId(req) } });
+    if (!store) return res.status(404).json({ error: "Store not found." });
+    res.json(cloverStatus(store));
+  }));
+
+  /**
+   * Save the credentials, then immediately prove them against Clover — a
+   * connection that only looks saved is worse than none, because it fails
+   * later at the till. Nothing is written unless Clover answers.
+   */
+  router.put("/clover", requireRole("OWNER", "MANAGER"), ah(async (req, res) => {
+    const store = await prisma.store.findUnique({ where: { id: storeId(req) } });
+    if (!store) return res.status(404).json({ error: "Store not found." });
+
+    const env = clover.ENVS.includes(req.body?.env) ? req.body.env : "production";
+    const merchantId = String(req.body?.merchantId ?? "").trim();
+
+    // An empty token field means "keep the one already saved", so switching
+    // environment or fixing a typo doesn't force the shop to paste it again.
+    const typed = String(req.body?.token ?? "").trim();
+    const token = typed || store.cloverApiToken;
+
+    if (!merchantId) return res.status(400).json({ error: "Enter your Clover merchant ID." });
+    if (!token) return res.status(400).json({ error: "Enter your Clover API token." });
+
+    let merchantName;
+    try {
+      ({ merchantName } = await clover.verify({ apiBase: clover.apiBaseFor(env), merchantId, token }));
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    // cloverMerchantId is unique across stores — an inbound webhook uses it to
+    // find whose order it is, so two stores can't claim the same account.
+    const taken = await prisma.store.findFirst({
+      where: { cloverMerchantId: merchantId, id: { not: store.id } },
+      select: { name: true },
+    });
+    if (taken) {
+      return res.status(409).json({ error: `${taken.name} is already connected to that merchant account.` });
+    }
+
+    const updated = await prisma.store.update({
+      where: { id: store.id },
+      data: {
+        cloverEnv: env,
+        cloverMerchantId: merchantId,
+        cloverApiToken: token,
+        cloverVerifiedAt: new Date(),
+      },
+    });
+
+    res.json({ ...cloverStatus(updated), merchantName });
+  }));
+
+  router.delete("/clover", requireRole("OWNER", "MANAGER"), ah(async (req, res) => {
+    const updated = await prisma.store.update({
+      where: { id: storeId(req) },
+      data: {
+        cloverMerchantId: null,
+        cloverApiToken: null,
+        cloverVerifiedAt: null,
+      },
+    });
+    res.json(cloverStatus(updated));
   }));
 
   return router;

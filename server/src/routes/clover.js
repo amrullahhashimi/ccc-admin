@@ -63,9 +63,11 @@ module.exports = () => {
 
   router.get("/status", (req, res) => {
     const t = store.read();
+    // A CLOVER_API_TOKEN in .env is a connection too, even with an empty store.
+    const manual = !!store.staticToken();
     res.json({
-      connected: !!t?.accessToken,
-      merchantId: t?.merchantId ?? null,
+      connected: manual || !!t?.accessToken,
+      merchantId: t?.merchantId ?? process.env.CLOVER_MERCHANT_ID ?? null,
       accessExp: t?.accessExp ?? null,
       // One-time webhook handshake code, shown here so it doesn't have to be dug out of server logs.
       webhookVerificationCode: t?.webhookVerificationCode ?? null,

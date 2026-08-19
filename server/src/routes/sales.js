@@ -1,6 +1,7 @@
 const express = require("express");
-const { scope, stamp, assertStore } = require("../tenancy");
+const { scope, stamp, assertStore, storeId } = require("../tenancy");
 const cloverStore = require("../clover-store");
+const cloverConfig = require("../clover-config");
 
 const METHODS = ["CASH", "CARD", "ETRANSFER", "OTHER"];
 const GST_RATE = 0.05;
@@ -262,50 +263,43 @@ module.exports = (prisma, requireRole) => {
   /* --------------------------- card (Clover Flex) --------------------------- */
 
   /**
-   * Push an amount to the Clover Flex over the cloud (REST Pay Display / Cloud
-   * Pay Display) and, on approval, record it as a CARD payment.
-   *
-   * CONFIG — set these in the server's .env. The OAuth token MUST stay
-   * server-side, never shipped to the browser:
-   *   CLOVER_BASE_URL     sandbox: https://scl-sandbox.dev.clover.com
-   *                       production: https://scl.clover.com
-   *   CLOVER_RAID         your semi-integrated app's Remote App ID  -> X-POS-Id
-   *   CLOVER_DEVICE_ID    the Flex serial number                    -> X-Clover-Device-Id
-   *   CLOVER_OAUTH_TOKEN  merchant OAuth access token               -> Authorization: Bearer
-   *
-   * Until those exist the route returns 501, so the "Pay by card" button
-   * degrades gracefully instead of erroring hard.
-   */
-  /**
    * Charge the balance on the Clover Flex via REST Pay Display (cloud), then
    * return the Clover payment id. This is a SERVER-SIDE, SYNCHRONOUS call: the
    * HTTP request resolves only once the customer taps/inserts on the Flex, so
    * expect it to hang for a while and don't set a short timeout. Cloud Pay
    * Display must be installed and OPEN (foreground) on the Flex.
    *
-   * ENV:
-   *   CLOVER_API_BASE   sandbox: https://apisandbox.dev.clover.com
-   *                     production: https://api.clover.com
-   *   CLOVER_RAID       Remote App ID       -> X-POS-Id header
-   *   CLOVER_DEVICE_ID  Flex serial number  -> X-Clover-Device-Id header
-   * The OAuth access token comes from the /oauth/connect flow (clover-store),
-   * falling back to a CLOVER_OAUTH_TOKEN env var if you set one manually.
+   * The account comes from the store's Clover connection (Store settings →
+   * Connect to Clover); the terminal itself is configured only in the
+   * server's .env, since it isn't part of connecting an account:
+   *   CLOVER_RAID       semi-integrated Remote App ID -> X-POS-Id header
+   *   CLOVER_DEVICE_ID  terminal serial number        -> X-Clover-Device-Id
+   *
+   * Until those exist it throws 501, so the "Pay by card" button degrades
+   * gracefully instead of erroring hard.
    */
-  async function chargeOnClover({ amountCents, externalId }) {
-    const apiBase = process.env.CLOVER_API_BASE || "https://apisandbox.dev.clover.com";
+  async function chargeOnClover({ store, amountCents, externalId }) {
+    const cfg = cloverConfig.configForStore(store);
+    const { apiBase } = cfg;
+    // Terminal-only settings. They are not part of Connect to Clover, which
+    // covers reading and writing merchant data and nothing to do with a device.
     const raid = process.env.CLOVER_RAID;
     const deviceId = process.env.CLOVER_DEVICE_ID;
 
-    let token;
-    try {
-      token = await cloverStore.getAccessToken();
-    } catch {
-      token = process.env.CLOVER_OAUTH_TOKEN; // manual fallback for a token set outside the OAuth flow
+    // The store's own token, or — for a shop still configured the old way —
+    // whatever /oauth/connect saved. The 501 below covers both being absent.
+    let token = cfg.token;
+    if (!token) {
+      try {
+        token = await cloverStore.getAccessToken();
+      } catch {
+        token = null;
+      }
     }
 
     if (!raid || !deviceId || !token) {
       const e = new Error(
-        "Clover isn't ready. Set CLOVER_RAID and CLOVER_DEVICE_ID, and connect the account at /oauth/connect."
+        "Card payments on a Clover terminal aren't set up. That needs CLOVER_RAID and CLOVER_DEVICE_ID in the server's configuration, on top of a connected Clover account."
       );
       e.status = 501;
       throw e;
@@ -353,7 +347,12 @@ module.exports = (prisma, requireRole) => {
       const amountCents = Math.round(Number(req.body.amountCents)) || balance;
       if (amountCents <= 0) return res.status(400).json({ error: "Nothing left to charge." });
 
-      const result = await chargeOnClover({ amountCents, externalId: `sale-${sale.number}-${Date.now()}` });
+      const store = await prisma.store.findUnique({ where: { id: storeId(req) } });
+      const result = await chargeOnClover({
+        store,
+        amountCents,
+        externalId: `sale-${sale.number}-${Date.now()}`,
+      });
 
       await prisma.payment.create({
         data: { saleId: sale.id, amountCents, method: "CARD", reference: result.paymentId || null },

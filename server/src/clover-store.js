@@ -54,15 +54,29 @@ async function doRefresh(refreshToken) {
 }
 
 /**
+ * A merchant API token pasted straight into .env (Clover dashboard → Setup →
+ * API Tokens). It never expires and needs no OAuth round trip, so a
+ * single-merchant shop can skip /oauth/connect entirely. It is set
+ * deliberately, so it wins over the token store — otherwise a stale sandbox
+ * connection would silently shadow it. CLOVER_OAUTH_TOKEN is the older name.
+ */
+const staticToken = () => process.env.CLOVER_API_TOKEN || process.env.CLOVER_OAUTH_TOKEN || null;
+
+/**
  * A live access token, transparently refreshing it first if it's expired or
  * about to be. Callers never need to think about expiry — this is the one
- * true way to get a token for a Clover API call. Throws if the merchant
- * hasn't done the one-time authorization at /oauth/connect yet.
+ * true way to get a token for a Clover API call. Throws if there is neither a
+ * static token nor a completed /oauth/connect authorization.
  */
 async function getAccessToken() {
+  const manual = staticToken();
+  if (manual) return manual;
+
   const tokens = read();
   if (!tokens?.accessToken) {
-    const e = new Error("Clover isn't connected yet — visit /oauth/connect once to authorize it.");
+    const e = new Error(
+      "Clover isn't connected — set CLOVER_API_TOKEN in the server .env, or visit /oauth/connect once to authorize it."
+    );
     e.status = 501;
     throw e;
   }
@@ -76,4 +90,4 @@ async function getAccessToken() {
   return updated.accessToken;
 }
 
-module.exports = { read, write, patch, getAccessToken };
+module.exports = { read, write, patch, getAccessToken, staticToken };

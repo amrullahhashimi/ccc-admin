@@ -1,5 +1,6 @@
 const express = require("express");
-const { scope, stamp, assertStore } = require("../tenancy");
+const cloverSync = require("../clover-sync");
+const { scope, stamp, assertStore, storeId } = require("../tenancy");
 
 const CONDITIONS =["NEW", "OPEN_BOX", "USED_LIKE_NEW", "USED_GOOD", "USED_FAIR", "FOR_PARTS"];
 
@@ -185,6 +186,8 @@ module.exports = (prisma, requireRole) => {
           include: {
             location: { select: { id: true, name: true } },
             vendor: { select: { id: true, name: true } },
+            // The sale a Clover-sold serial went out on, so the row can link to it.
+            sale: { select: { id: true, number: true } },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -263,7 +266,16 @@ module.exports = (prisma, requireRole) => {
         include: { units: true, stockEntries: true },
       });
 
-      res.status(201).json(withCounts(created));
+      // Same deal as adding serials later: the product is saved first, then
+      // its serials are mirrored to Clover on a best-effort basis.
+      const clover = await cloverSync.syncUnits({
+        prisma,
+        storeId: storeId(req),
+        product: created,
+        units: created.units ?? [],
+      });
+
+      res.status(201).json({ ...withCounts(created), clover });
     } catch (err) {
       if (err.code === "P2002") {
         return res.status(409).json({ error: "That SKU or serial is already used." });
@@ -307,7 +319,20 @@ module.exports = (prisma, requireRole) => {
           prisma.productUnit.create({ data: { ...u, productId: req.params.id, ...stamp(req) } })
         )
       );
-      res.status(201).json(created);
+
+      // Mirror each new serial onto the connected Clover account. Deliberately
+      // after the transaction and never inside it: the serials are booked in
+      // either way, and a Clover outage must not roll back stock that is
+      // physically on the shelf. `clover` reports what happened.
+      const product = await prisma.product.findUnique({ where: { id: req.params.id } });
+      const clover = await cloverSync.syncUnits({
+        prisma,
+        storeId: storeId(req),
+        product,
+        units: created,
+      });
+
+      res.status(201).json({ units: created, clover });
     } catch (err) {
       if (err.code === "P2002") {
         return res.status(409).json({ error: "That serial is already in the system." });
@@ -348,8 +373,24 @@ module.exports = (prisma, requireRole) => {
       if (req.body?.labelCost !== undefined) data.labelCostCents = moneyOrNull(req.body.labelCost);
       if (req.body?.salePrice !== undefined) data.salePriceCents = moneyOrNull(req.body.salePrice);
 
-      const updated = await prisma.productUnit.update({ where: { id: req.params.unitId }, data });
-      res.json(updated);
+      const updated = await prisma.productUnit.update({
+        where: { id: req.params.unitId },
+        data,
+        include: { product: true },
+      });
+
+      // Push the edit onward. syncUnits creates the item when the serial has
+      // none yet, which covers a unit added while the store was disconnected.
+      const clover = await cloverSync.syncUnits({
+        prisma,
+        storeId: storeId(req),
+        product: updated.product,
+        units: [updated],
+        action: "updated",
+      });
+
+      const { product: _product, ...unit } = updated;
+      res.json({ unit, clover });
     } catch (err) {
       if (err.code === "P2002") return res.status(409).json({ error: "That serial is already used." });
       if (err.code === "P2025") return res.status(404).json({ error: "Serial not found." });
@@ -386,15 +427,24 @@ module.exports = (prisma, requireRole) => {
         }),
       ]);
 
-      res.json({ ok: true });
+      // The item stays on Clover — it sold, and Clover's reporting refers to
+      // it — but its count comes down so it can't be rung up twice.
+      const clover = await cloverSync.releaseUnits({
+        prisma,
+        storeId: storeId(req),
+        units: [unit],
+      });
+
+      res.json({ ok: true, clover });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
   });
 
   /**
-   * Put a sold serial back on the shelf. Status only — the quantity on hand is
-   * left alone so it can be corrected by hand from the Inventory tab.
+   * Put a sold serial back on the shelf. The local quantity on hand is left
+   * alone so it can be corrected by hand from the Inventory tab; the Clover
+   * count is put back, since selling took it off.
    */
   router.post("/units/:unitId/return", async (req, res) => {
     try {
@@ -407,7 +457,16 @@ module.exports = (prisma, requireRole) => {
       }
 
       await prisma.productUnit.update({ where: { id: unit.id }, data: { status: "IN_STOCK" } });
-      res.json({ ok: true });
+
+      // The exact inverse of selling: the handset is back on the shelf, so the
+      // register gets its count back and can sell it again.
+      const clover = await cloverSync.restockUnits({
+        prisma,
+        storeId: storeId(req),
+        units: [unit],
+      });
+
+      res.json({ ok: true, clover });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -424,7 +483,16 @@ module.exports = (prisma, requireRole) => {
         return res.status(409).json({ error: "That unit has been sold — it can't be deleted." });
       }
       await prisma.productUnit.delete({ where: { id: req.params.unitId } });
-      res.json({ ok: true });
+
+      // Removing a serial means it should not have been on the books, so the
+      // Clover item goes with it. Selling is the other case — see /sell.
+      const clover = await cloverSync.deleteUnits({
+        prisma,
+        storeId: storeId(req),
+        units: [unit],
+      });
+
+      res.json({ ok: true, clover });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

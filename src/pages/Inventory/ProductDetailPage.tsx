@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import {
   CONDITIONS,
   STORAGE_SIZES,
@@ -13,6 +13,7 @@ import {
   type Product,
   type ProductUnit,
 } from "../../lib/api";
+import { reportCloverSync } from "../../lib/cloverSync";
 import { useAuth } from "../../context/AuthContext";
 import { useStore } from "../../context/StoreContext";
 import { printUnitLabel } from "./printLabel";
@@ -334,16 +335,18 @@ function SerialsTab({
     setSaving(true);
     try {
       if (editingId) {
-        await productsApi.updateUnit(editingId, {
+        const { clover } = await productsApi.updateUnit(editingId, {
           ...form,
           serial: form.serial.trim(),
           warrantyMonths: parseInt(form.warrantyMonths, 10),
         });
+        reportCloverSync(notify, clover);
         resetForm();
       } else {
-        await productsApi.addUnits(product.id, [
+        const { clover } = await productsApi.addUnits(product.id, [
           { ...form, serial: form.serial.trim(), warrantyMonths: parseInt(form.warrantyMonths, 10) },
         ]);
+        reportCloverSync(notify, clover);
         // Keep everything but the serial — the next unit is usually similar.
         setForm((f) => ({ ...f, serial: "" }));
       }
@@ -357,15 +360,17 @@ function SerialsTab({
   const remove = async (unit: ProductUnit) => {
     const ok = await notify.confirm({
       title: `Remove serial ${unit.serial}?`,
-      message: "The unit is deleted from this product.",
+      message:
+        "The unit is deleted from this product, and its item is deleted from Clover too.",
       confirmText: "Remove",
       variant: "error",
     });
     if (!ok) return;
     try {
-      await productsApi.removeUnit(unit.id);
+      const { clover } = await productsApi.removeUnit(unit.id);
       if (editingId === unit.id) resetForm();
       notify.success(`Serial ${unit.serial} removed.`);
+      reportCloverSync(notify, clover);
       onChanged();
     } catch (err) {
       notify.error("Could not remove.", {
@@ -383,7 +388,8 @@ function SerialsTab({
     if (!ok) return;
     setSellingId(unit.id);
     try {
-      await productsApi.sellUnit(unit.id);
+      const { clover } = await productsApi.sellUnit(unit.id);
+      reportCloverSync(notify, clover);
       if (editingId === unit.id) resetForm();
       notify.success(`Serial ${unit.serial} marked as sold.`);
       onChanged();
@@ -405,7 +411,8 @@ function SerialsTab({
     if (!ok) return;
     setReturningId(unit.id);
     try {
-      await productsApi.returnUnit(unit.id);
+      const { clover } = await productsApi.returnUnit(unit.id);
+      reportCloverSync(notify, clover);
       notify.success(`Serial ${unit.serial} is back in stock.`);
       onChanged();
     } catch (err) {
@@ -432,6 +439,7 @@ function SerialsTab({
             <th className="px-5 py-3">Sale price</th>
             <th className="px-5 py-3">Vendor</th>
             <th className="px-5 py-3">Status</th>
+            <th className="px-5 py-3">Sale</th>
             <th className="px-5 py-3"></th>
           </tr>
         </thead>
@@ -456,6 +464,21 @@ function SerialsTab({
               <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">{u.vendor?.name ?? "—"}</td>
               <td className="px-5 py-3 text-sm text-gray-600 dark:text-gray-400">
                 {u.status === "IN_STOCK" ? "In stock" : u.status === "SOLD" ? "Sold" : u.status}
+              </td>
+              <td className="px-5 py-3 text-sm">
+                {/* Only a sale rung up on the Clover register links back here; a
+                    serial sold by hand has no sale record to point at. */}
+                {u.sale ? (
+                  <Link
+                    to={`/sales/${u.sale.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-medium text-brand-500 hover:text-brand-600 hover:underline"
+                  >
+                    #{u.sale.number}
+                  </Link>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
               </td>
               <td className="px-5 py-3 text-right">
                 <div className="flex items-center justify-end gap-3">

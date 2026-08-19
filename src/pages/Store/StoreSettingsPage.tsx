@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { stores, type LogoSlot, type Store } from "../../lib/api";
+import {
+  stores,
+  type CloverEnv,
+  type CloverForm,
+  type CloverStatus,
+  type LogoSlot,
+  type Store,
+} from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { useNotify } from "../../components/ui/notify";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -114,6 +122,203 @@ function LogoRow({
   );
 }
 
+/* ============================ connect to Clover ============================ */
+
+const CLOVER_ENVS: { value: CloverEnv; label: string }[] = [
+  { value: "production", label: "Production — your real merchant account" },
+  { value: "sandbox", label: "Sandbox — Clover's test account" },
+];
+
+const blankClover = (s?: CloverStatus | null): CloverForm => ({
+  env: s?.env ?? "production",
+  merchantId: s?.merchantId ?? "",
+  token: "", // never prefilled — the server only ever sends back the last four
+});
+
+/** Connected or not, at a glance, without reading the fields below. */
+function CloverPill({ status }: { status: CloverStatus | null }) {
+  if (!status) return null;
+
+  const [tone, text] = status.connected
+    ? (["bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-400", "Connected"] as const)
+    : (["bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400", "Not connected"] as const);
+
+  return <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${tone}`}>{text}</span>;
+}
+
+/**
+ * Connect this store to a Clover merchant account.
+ *
+ * Its own card with its own buttons rather than part of the page's Save, for
+ * two reasons: saving here checks the credentials against Clover before
+ * writing anything, and the API token is write-only — the form can't
+ * round-trip a value the server never sends it.
+ */
+function CloverCard({ mayEdit }: { mayEdit: boolean }) {
+  const notify = useNotify();
+
+  const [status, setStatus] = useState<CloverStatus | null>(null);
+  const [form, setForm] = useState<CloverForm>(blankClover());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    stores
+      .clover()
+      .then((s) => {
+        setStatus(s);
+        setForm(blankClover(s));
+      })
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Could not load your Clover settings.")
+      );
+  }, []);
+
+  const set = <K extends keyof CloverForm>(k: K, v: CloverForm[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
+
+  async function connect() {
+    setBusy(true);
+    setError("");
+    try {
+      const next = await stores.saveClover(form);
+      setStatus(next);
+      setForm(blankClover(next));
+      notify.success("Connected to Clover", {
+        message: next.merchantName ? `Signed in to ${next.merchantName}.` : undefined,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not connect.";
+      setError(message);
+      notify.error("Clover didn't accept those details", { message });
+    }
+    setBusy(false);
+  }
+
+  async function disconnect() {
+    const ok = await notify.confirm({
+      title: "Disconnect Clover?",
+      message:
+        "The Merchant inventory tab and order sync from the register stop working until you connect again. Nothing on the Clover account itself is changed.",
+      confirmText: "Disconnect",
+      variant: "error",
+    });
+    if (!ok) return;
+
+    setBusy(true);
+    setError("");
+    try {
+      const next = await stores.disconnectClover();
+      setStatus(next);
+      setForm(blankClover(next));
+      notify.success("Clover disconnected");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not disconnect.";
+      setError(message);
+      notify.error("Could not disconnect", { message });
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className={cardClass}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold text-gray-800 dark:text-white/90">Connect to Clover</h2>
+          <p className="mt-1 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+            Links this store to your Clover merchant account. Enter these once and the app stays
+            connected — it reads and writes the account's data from then on, including the
+            Merchant inventory tab.
+          </p>
+        </div>
+        <CloverPill status={status} />
+      </div>
+
+
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className={labelClass}>Environment</label>
+          <select
+            className={inputClass}
+            value={form.env}
+            disabled={!mayEdit || busy}
+            onChange={(e) => set("env", e.target.value as CloverEnv)}
+          >
+            {CLOVER_ENVS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Merchant ID <span className="text-error-500">*</span>
+          </label>
+          <input
+            className={inputClass}
+            value={form.merchantId}
+            disabled={!mayEdit || busy}
+            onChange={(e) => set("merchantId", e.target.value.trim())}
+          />
+          <p className="mt-1.5 text-xs text-gray-400">
+            In your Clover dashboard under Account &amp; Setup — a 13-character code.
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            API token {!status?.tokenHint && <span className="text-error-500">*</span>}
+          </label>
+          <input
+            type="password"
+            autoComplete="off"
+            className={inputClass}
+            value={form.token}
+            disabled={!mayEdit || busy}
+            onChange={(e) => set("token", e.target.value.trim())}
+          />
+          <p className="mt-1.5 text-xs text-gray-400">
+            {status?.tokenHint
+              ? `One is saved, ending ${status.tokenHint.slice(-4)}. Leave this blank to keep it, or paste a new token to replace it.`
+              : "Create one in Clover under Setup → API Tokens, with read and write access to Orders, Inventory and Payments."}
+          </p>
+        </div>
+
+      </div>
+
+      {error && <p className="mt-4 text-sm text-error-500">{error}</p>}
+
+      {mayEdit && (
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={connect}
+            disabled={busy}
+            className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+          >
+            {busy ? "Checking with Clover…" : status?.merchantId ? "Save & re-check" : "Connect"}
+          </button>
+          {status?.merchantId && (
+            <button
+              type="button"
+              onClick={disconnect}
+              disabled={busy}
+              className="text-sm font-medium text-error-500 hover:text-error-600 disabled:opacity-60"
+            >
+              Disconnect
+            </button>
+          )}
+          <span className="text-xs text-gray-400">
+            Connecting checks the details against Clover before saving them.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function StoreSettingsPage() {
   const { can } = useAuth();
   const mayEdit = can("OWNER", "MANAGER");
@@ -186,7 +391,8 @@ export default function StoreSettingsPage() {
   if (!form || !store) return <p className="p-10 text-center text-sm text-gray-500">Loading…</p>;
 
   return (
-    <form onSubmit={save} className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
+    <form onSubmit={save} className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Store settings</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -333,5 +539,10 @@ export default function StoreSettingsPage() {
         </div>
       )}
     </form>
+
+    {/* Sits outside the form above: it saves itself, and Enter in one of its
+        fields must not trigger the page's Save settings. */}
+    <CloverCard mayEdit={mayEdit} />
+    </div>
   );
 }

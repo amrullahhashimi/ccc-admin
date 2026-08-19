@@ -36,6 +36,16 @@ model Store {
   labelWidthMm  Int @default(50)
   labelHeightMm Int @default(25)
 
+  // Clover connection, filled in from Store settings -> Connect to Clover.
+  // Per store, so two shops on one deployment keep separate merchant accounts.
+  // These credentials read and write the merchant's own data through the REST
+  // API; nothing here touches a payment terminal.
+  cloverEnv        String  @default("production") // production | sandbox
+  cloverMerchantId String? @unique // the account these credentials belong to
+  cloverApiToken   String? @db.Text // secret — masked before it ever reaches the browser
+  cloverVerifiedAt DateTime? // last time the credentials answered Clover
+  cloverPolledAt   DateTime? // how far the order poller has read; see clover-poll.js
+
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -280,6 +290,16 @@ model ProductUnit {
 
   status String @default("IN_STOCK") // IN_STOCK | RESERVED | SOLD | RETURNED
 
+  /// The item this serial has in the connected Clover account, set when the
+  /// serial is first pushed. Null means it was never pushed — either the store
+  /// isn't connected to Clover, or the push failed and can be retried.
+  cloverItemId String?
+
+  /// The sale this serial went out on. Set when a sale rung up on the Clover
+  /// register is matched back to this unit, so the serial row can point at it.
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
@@ -439,6 +459,7 @@ model Sale {
 
   items    SaleItem[]
   payments Payment[]
+  units    ProductUnit[]
   invoice  Invoice?
 
   @@unique([storeId, number])

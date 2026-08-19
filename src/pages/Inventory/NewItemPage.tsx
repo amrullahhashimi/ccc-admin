@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { meta as metaApi, products as productsApi, type Meta } from "../../lib/api";
+import { reportCloverSync } from "../../lib/cloverSync";
+import { useNotify } from "../../components/ui/notify";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
@@ -9,6 +11,7 @@ const labelClass = "mb-1.5 block text-sm font-medium text-gray-700 dark:text-gra
 
 export default function NewItemPage() {
   const navigate = useNavigate();
+  const notify = useNotify();
   const [meta, setMeta] = useState<Meta | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -45,6 +48,7 @@ export default function NewItemPage() {
     setSaving(true);
     try {
       const created = await productsApi.create({ ...form, tracksSerials });
+      reportCloverSync(notify, created.clover);
       // Straight to the item so serials / stock can go on next.
       navigate(`/inventory/items/${created.id}`);
     } catch (err) {
