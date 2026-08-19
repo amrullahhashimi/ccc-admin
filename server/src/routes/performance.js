@@ -79,17 +79,36 @@ module.exports = (prisma, requireRole) => {
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     });
 
+    // Every day in the range, whether or not anything was taken. A chart that
+    // only plots the days with entries silently closes the gaps, so a quiet
+    // week looks the same as a busy one and the axis stops being a calendar.
     const byDay = new Map();
+    for (let d = new Date(from); d <= to; d.setUTCDate(d.getUTCDate() + 1)) {
+      byDay.set(toDayString(d), {
+        ...Object.fromEntries(PAYMENT_TYPES.map((t) => [t.value, 0])),
+        // Tells "nothing was taken" apart from "nobody has entered this yet" —
+        // which matters for the days of a month that haven't happened.
+        hasEntries: false,
+      });
+    }
+
     const byPaymentType = Object.fromEntries(PAYMENT_TYPES.map((t) => [t.value, 0]));
     const bySaleType = Object.fromEntries(SALE_TYPES.map((t) => [t.value, 0]));
     let totalCents = 0;
 
     for (const e of entries) {
       const day = toDayString(e.date);
+      // An entry can only fall outside the seeded range if the range moved
+      // under us; seed it rather than drop the money on the floor.
       if (!byDay.has(day)) {
-        byDay.set(day, Object.fromEntries(PAYMENT_TYPES.map((t) => [t.value, 0])));
+        byDay.set(day, {
+          ...Object.fromEntries(PAYMENT_TYPES.map((t) => [t.value, 0])),
+          hasEntries: false,
+        });
       }
-      byDay.get(day)[e.paymentType] += e.amountCents;
+      const bucket = byDay.get(day);
+      bucket[e.paymentType] += e.amountCents;
+      bucket.hasEntries = true;
       byPaymentType[e.paymentType] += e.amountCents;
       bySaleType[e.saleType] += e.amountCents;
       totalCents += e.amountCents;

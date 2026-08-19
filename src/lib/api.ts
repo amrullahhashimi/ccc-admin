@@ -670,8 +670,15 @@ export interface PerformanceEntry {
   createdAt: string;
 }
 
-/** One day's takings split by payment type, keyed by the payment type's value. */
-export type PerformanceDay = { date: string } & Record<string, number | string>;
+/**
+ * One day's takings split by payment type, keyed by the payment type's value.
+ * Every day in the range is present, so `hasEntries` is what separates a day
+ * that took nothing from one nobody has filled in yet.
+ */
+export type PerformanceDay = { date: string; hasEntries: boolean } & Record<
+  string,
+  number | string | boolean
+>;
 
 export interface PerformanceReport {
   from: string;

@@ -45,6 +45,20 @@ const toInput = (d: Date) =>
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const monthEnd = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 
+/**
+ * The weekday for a plain date string.
+ *
+ * Parsed as UTC, matching how the API sends it. Reading it as local time
+ * shifts the day backwards anywhere west of Greenwich, which would label a
+ * Monday as Sunday for exactly the shops that care about the difference.
+ */
+const weekdayOf = (iso: string) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+    new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+  ];
+};
+
 /** "2026-08-19" → "19 Aug", the label the day axis carries. */
 const dayLabel = (iso: string) => {
   const [, m, d] = iso.split("-").map(Number);
@@ -160,11 +174,20 @@ export default function PerformancePage() {
     list.find((t) => t.value === v)?.label ?? v;
 
   /* Daily takings, one line per way of paying. */
-  const dayNumbers = (report?.byDay ?? []).map((d) => String(Number(d.date.slice(8, 10))));
-  const fullDates = (report?.byDay ?? []).map((d) => dayLabel(d.date));
+  const days = report?.byDay ?? [];
+
+  // Two lines per tick: the day over its weekday. ApexCharts renders an array
+  // as a stacked label, which is what the shop reads the chart by — a quiet
+  // Sunday is only obvious if the axis says Sunday.
+  const dayNumbers = days.map((d) => [String(Number(d.date.slice(8, 10))), weekdayOf(d.date)]);
+  const fullDates = days.map((d) => `${weekdayOf(d.date)} ${dayLabel(d.date)}`);
+
   const dailySeries = paymentTypes.map((t) => ({
     name: t.label,
-    data: (report?.byDay ?? []).map((d) => Number(d[t.value] ?? 0) / 100),
+    // null, not 0, for a day nobody has entered: the line breaks rather than
+    // diving to the floor and claiming the shop took nothing. A day that does
+    // have entries but not this payment type is a real zero.
+    data: days.map((d) => (d.hasEntries ? Number(d[t.value] ?? 0) / 100 : null)),
   }));
 
   /**
@@ -179,7 +202,10 @@ export default function PerformancePage() {
    */
   const DAILY_STEP = 100;
   const MAX_TICKS = 20;
-  const dailyPeak = Math.max(0, ...dailySeries.flatMap((s) => s.data));
+  const dailyPeak = Math.max(
+    0,
+    ...dailySeries.flatMap((s) => s.data.filter((v): v is number => v != null))
+  );
   const dailyStep =
     DAILY_STEP * Math.max(1, Math.ceil(dailyPeak / DAILY_STEP / MAX_TICKS));
   const dailyMax = Math.max(dailyStep, Math.ceil(dailyPeak / dailyStep) * dailyStep);
