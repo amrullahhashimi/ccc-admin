@@ -168,28 +168,29 @@ export default function PerformancePage() {
   }));
 
   /**
-   * Built to the same conventions as the template's line chart
-   * (components/charts/line/LineChartOne): straight 2px strokes, no toolbar,
-   * markers only on hover, horizontal gridlines only, a bare category axis.
+   * The template's Line Chart 3 treatment: a thin stroke with a gradient fading
+   * to nothing beneath it, no markers until hover, faint horizontal gridlines,
+   * and a bare axis.
    *
-   * One departure. That component renders as an area with a gradient fill,
-   * which works for its two series and would not for five — filled areas drawn
-   * over each other hide whichever line is behind, and no fill opacity fixes
-   * that. Strokes alone keep all five payment types readable.
+   * That design carries one series. Here it carries five, so the gradient is
+   * pitched lower than the template's 0.55 — five fills stacked at that
+   * strength turn the lower half of the plot to mud and bury whichever line
+   * sits behind. At 0.3 fading to 0 each fill still reads as belonging to its
+   * line, while the strokes, which stay at full strength, do the identifying.
    */
   const dailyOptions: ApexOptions = {
     chart: {
-      type: "line",
+      type: "area",
       fontFamily: "Outfit, sans-serif",
       toolbar: { show: false },
       background: "transparent",
     },
     colors,
     stroke: { curve: "straight", width: 2 },
-    // Full strength. ApexCharts otherwise draws line strokes at 0.85 opacity,
-    // which lightens every hue against the surface — and these were checked for
-    // colour-vision separation at their stated values, not at 85% of them.
-    fill: { opacity: 1 },
+    fill: {
+      type: "gradient",
+      gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0, stops: [0, 100] },
+    },
     markers: {
       size: 0,
       strokeColors: surface,
@@ -404,7 +405,7 @@ export default function PerformancePage() {
                   days into whatever width is left. */}
               <div className="min-w-0 max-w-full overflow-x-auto custom-scrollbar">
                 <div className="min-w-[1000px]">
-                  <Chart options={dailyOptions} series={dailySeries} type="line" height={340} />
+                  <Chart options={dailyOptions} series={dailySeries} type="area" height={340} />
                 </div>
               </div>
             </div>
