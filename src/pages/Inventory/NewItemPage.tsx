@@ -125,22 +125,24 @@ export default function NewItemPage() {
               ))}
             </select>
           </div>
-          <div />
-
-          <div>
-            <label className={labelClass}>Cost price</label>
-            <input type="number" step="0.01" className={inputClass} value={form.cost} onChange={(e) => set("cost", e.target.value)} />
-          </div>
-          <div>
-            <label className={labelClass}>Online price</label>
-            <input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} />
-          </div>
-          <div className="sm:col-span-2 flex flex-wrap items-end gap-6">
-            <div className="min-w-[10rem] flex-1">
+          {/* The three prices and the serialised flag read as one decision, so they
+              sit on their own full-width row rather than wrapping through the
+              two-column grid above. items-end keeps the checkbox on the same
+              baseline as the inputs, which have a label above them and it doesn't. */}
+          <div className="sm:col-span-2 grid items-end gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className={labelClass}>Cost price</label>
+              <input type="number" step="0.01" className={inputClass} value={form.cost} onChange={(e) => set("cost", e.target.value)} />
+            </div>
+            <div>
+              <label className={labelClass}>Online price</label>
+              <input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} />
+            </div>
+            <div>
               <label className={labelClass}>Sale price</label>
               <input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} />
             </div>
-            <label className="flex cursor-pointer items-center gap-2 pb-3 text-sm text-gray-700 dark:text-gray-400">
+            <label className="flex h-11 cursor-pointer items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
               <input
                 type="checkbox"
                 checked={tracksSerials}
