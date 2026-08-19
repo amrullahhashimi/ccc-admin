@@ -68,7 +68,7 @@ async function fetchOrders(cfg, since) {
 async function pollStore(prisma, store, { sinceMs, advanceCursor = true } = {}) {
   const cfg = clover.configForStore(store);
   if (!clover.isConnected(cfg)) {
-    return { connected: false, scanned: 0, imported: [], skipped: [] };
+    return { connected: false, scanned: 0, imported: [], refunded: [], skipped: [] };
   }
 
   const since =
@@ -84,6 +84,7 @@ async function pollStore(prisma, store, { sinceMs, advanceCursor = true } = {}) 
 
   const orders = await fetchOrders(cfg, since);
   const imported = [];
+  const refunded = [];
   const skipped = [];
 
   for (const order of orders) {
@@ -99,6 +100,12 @@ async function pollStore(prisma, store, { sinceMs, advanceCursor = true } = {}) 
           `[clover poll] ${store.name}: order ${order.id} -> sale ${result.reference} ` +
             `(${result.matched} serial${result.matched === 1 ? "" : "s"} matched` +
             `${result.reviewed ? ", needs review" : ""})`
+        );
+      } else if (result.refunded) {
+        refunded.push({ order: order.id, restored: result.restored });
+        console.log(
+          `[clover poll] ${store.name}: order ${order.id} refunded -> ` +
+            `${result.restored} serial${result.restored === 1 ? "" : "s"} back in stock`
         );
       } else {
         skipped.push({ order: order.id, reason: result.reason || "nothing to do" });
@@ -123,6 +130,7 @@ async function pollStore(prisma, store, { sinceMs, advanceCursor = true } = {}) 
     since: new Date(since),
     scanned: orders.length,
     imported,
+    refunded,
     skipped,
   };
 }

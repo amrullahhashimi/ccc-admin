@@ -714,6 +714,8 @@ export interface CloverSyncReport {
   /** Orders Clover returned for the window. */
   scanned: number;
   imported: { order: string; matched: number; reviewed: boolean }[];
+  /** Sales the register has since refunded — their serials went back on the shelf. */
+  refunded: { order: string; restored: number }[];
   /** Orders passed over, each with the reason — the useful half when nothing lands. */
   skipped: { order: string; reason: string }[];
 }

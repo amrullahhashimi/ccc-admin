@@ -87,11 +87,18 @@ function RegisterSales() {
       setReport(next);
       refresh();
 
-      if (next.imported.length) {
+      const restored = next.refunded.reduce((n, r) => n + r.restored, 0);
+
+      if (next.imported.length || next.refunded.length) {
         const serials = next.imported.reduce((n, i) => n + i.matched, 0);
+        const parts = [];
+        if (serials) parts.push(`${serials} serial${serials === 1 ? "" : "s"} marked sold`);
+        if (restored) parts.push(`${restored} put back after a refund`);
         notify.success(
-          `Brought in ${next.imported.length} sale${next.imported.length === 1 ? "" : "s"}`,
-          { message: `${serials} serial${serials === 1 ? "" : "s"} marked sold.` }
+          `Brought in ${next.imported.length + next.refunded.length} change${
+            next.imported.length + next.refunded.length === 1 ? "" : "s"
+          }`,
+          { message: parts.join(", ") || undefined }
         );
       } else {
         notify.info("Nothing new to bring in", {
@@ -162,7 +169,8 @@ function RegisterSales() {
         <div className="mt-4 rounded-lg border border-gray-200 p-4 text-sm dark:border-gray-800">
           <p className="text-gray-700 dark:text-gray-300">
             Checked {report.scanned} order{report.scanned === 1 ? "" : "s"} from the last{" "}
-            {report.hours} hours — brought in {report.imported.length}.
+            {report.hours} hours — brought in {report.imported.length}
+            {report.refunded.length > 0 && `, ${report.refunded.length} refunded`}.
           </p>
           {/* Why an order was passed over is the useful half when nothing lands. */}
           {report.skipped.length > 0 && (

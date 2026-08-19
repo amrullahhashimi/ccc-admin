@@ -52,24 +52,79 @@ async function matchUnit(prisma, storeId, li) {
 }
 
 /**
- * Import one paid Clover order, or do nothing if it is already in.
+ * Undo a sale the register has since refunded.
  *
- * Returns { imported, reference, matched, reviewed } — or { imported: false,
- * reason } saying why it was passed over, which is what the sync report shows.
- * Safe to call twice with the same order: the unique cloverOrderId makes a
- * repeat a no-op rather than a duplicate sale.
+ * Every serial the sale consumed goes back on the shelf — IN_STOCK, unlinked
+ * from the sale, and one back on the quantity on hand — mirroring exactly what
+ * the import took. The sale itself is kept and marked REFUNDED rather than
+ * deleted: it happened, and the takings for that day have to still add up.
+ *
+ * Clover's stock is left alone. The refund was rung up there, so the register
+ * has already adjusted its own count; pushing one back would double it.
+ */
+async function refundSale({ prisma, store, sale }) {
+  const units = await prisma.productUnit.findMany({
+    where: { saleId: sale.id, storeId: store.id },
+    include: { product: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.sale.update({ where: { id: sale.id }, data: { status: "REFUNDED" } });
+
+    for (const unit of units) {
+      await tx.productUnit.update({
+        where: { id: unit.id },
+        data: { status: "IN_STOCK", saleId: null },
+      });
+      await tx.stockEntry.create({
+        data: {
+          productId: unit.productId,
+          quantity: 1,
+          costCents: unit.product.costCents,
+          note: `Refunded serial ${unit.serial} on Clover`,
+        },
+      });
+    }
+  });
+
+  return {
+    imported: false,
+    refunded: true,
+    reference: sale.cloverOrderId,
+    restored: units.length,
+  };
+}
+
+/**
+ * Bring one Clover order into line with what this app holds.
+ *
+ * Usually that means importing a paid sale, but the same call also catches an
+ * order that has since been refunded — the poller keeps seeing orders as they
+ * change, and a refund is a change like any other.
+ *
+ * Returns { imported, reference, matched, reviewed }, { refunded, restored },
+ * or { imported: false, reason } saying why it was passed over. Safe to call
+ * twice: both paths check what has already been done before doing anything.
  */
 async function importOrder({ prisma, store, order }) {
   if (!order?.id) return { imported: false, reason: "no order id" };
+
+  // Looked up before the paid check, not after: a refunded order is no longer
+  // PAID, so checking payment state first would hide every refund from us.
+  const already = await prisma.sale.findUnique({ where: { cloverOrderId: order.id } });
+
+  if (already) {
+    if (order.paymentState === "REFUNDED" && already.status !== "REFUNDED") {
+      return refundSale({ prisma, store, sale: already });
+    }
+    return { imported: false, reason: "already imported", reference: order.id };
+  }
 
   // An order only becomes a sale once it is paid for. An unpaid one is a
   // basket still open on the register, and the poller will see it again.
   if (order.paymentState !== "PAID") {
     return { imported: false, reason: `not paid yet (${order.paymentState || "unknown"})` };
   }
-
-  const already = await prisma.sale.findUnique({ where: { cloverOrderId: order.id } });
-  if (already) return { imported: false, reason: "already imported", reference: order.id };
 
   const lineItems = order.lineItems?.elements ?? [];
   const payments = order.payments?.elements ?? [];
@@ -164,4 +219,4 @@ async function importOrder({ prisma, store, order }) {
   };
 }
 
-module.exports = { importOrder, matchUnit, qtyOf };
+module.exports = { importOrder, refundSale, matchUnit, qtyOf };

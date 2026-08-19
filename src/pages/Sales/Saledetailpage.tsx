@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { money, saleRef, sales as salesApi, type Customer, type Sale } from "../../lib/api";
-import { useAuth } from "../../context/AuthContext";
-import { useStore } from "../../context/StoreContext";
-import { useNotify } from "../../components/ui/notify";
 
 const panelClass = "rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
 
@@ -31,9 +28,6 @@ function statusBadge(status: string) {
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { can } = useAuth();
-  const notify = useNotify();
-  const { store } = useStore(); // receipt header comes from Store settings
 
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,62 +80,6 @@ export default function SaleDetailPage() {
     setCarding(false);
   };
 
-  const voidSale = async () => {
-    const ok = await notify.confirm({
-      title: `Void sale ${saleRef(sale)}?`,
-      message: "Stock will be returned and this can't be undone.",
-      confirmText: "Void sale",
-      variant: "error",
-    });
-    if (!ok) return;
-    setBusy(true);
-    try {
-      await salesApi.void(sale.id);
-      notify.success(`Sale ${saleRef(sale)} voided.`);
-      await load();
-    } catch (err) {
-      notify.error("Could not void.", {
-        message: err instanceof Error ? err.message : undefined,
-      });
-    }
-    setBusy(false);
-  };
-
-  const printReceipt = () => {
-    const win = window.open("", "_blank", "width=420,height=640");
-    if (!win) {
-      return notify.warning("Pop-ups are blocked", {
-        message: "Allow pop-ups for this site to print the receipt.",
-      });
-    }
-    const rows = (sale.items ?? [])
-      .map((i) => `<tr><td>${escapeHtml(i.name)}${i.quantity > 1 ? ` ×${i.quantity}` : ""}</td><td style="text-align:right">${money(i.unitPriceCents * i.quantity)}</td></tr>`)
-      .join("");
-    const payRows = (sale.payments ?? [])
-      .map((p) => `<tr><td>${escapeHtml(p.method)}</td><td style="text-align:right">${money(p.amountCents)}</td></tr>`)
-      .join("");
-    win.document.write(`<!doctype html><html><head><meta charset="utf-8"/><title>Receipt ${saleRef(sale)}</title>
-<style>body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111;padding:12px;max-width:320px;margin:0 auto}h1{font-size:15px;margin:0 0 2px}.muted{color:#666;font-size:11px}table{width:100%;border-collapse:collapse;margin-top:8px}td{padding:2px 0}.line{border-top:1px dashed #999;margin:8px 0}.tot td{font-weight:bold}</style></head><body>
-  <h1>${escapeHtml(store?.name ?? "Canadian Cellular Communications")}</h1>
-  <div class="muted">${escapeHtml(sale.location?.name ?? "")}</div>
-  <div class="muted">Sale ${saleRef(sale)} · ${new Date(sale.createdAt).toLocaleString()}</div>
-  <div class="muted">Customer: ${escapeHtml(custName(sale.customer))}</div>
-  <div class="line"></div><table>${rows}</table><div class="line"></div>
-  <table>
-    <tr><td>Subtotal</td><td style="text-align:right">${money(sale.subtotalCents)}</td></tr>
-    <tr><td>GST (5%)</td><td style="text-align:right">${money(sale.taxCents)}</td></tr>
-    <tr class="tot"><td>Total</td><td style="text-align:right">${money(sale.totalCents)}</td></tr>
-  </table><div class="line"></div>
-  <table>${payRows}
-    <tr><td>Paid</td><td style="text-align:right">${money(paid)}</td></tr>
-    <tr class="tot"><td>Balance</td><td style="text-align:right">${money(balance)}</td></tr>
-  </table><div class="line"></div>
-  <div class="muted" style="text-align:center">Thank you!</div>
-  <script>window.onafterprint=()=>window.close();setTimeout(()=>{window.focus();window.print();},250);</script>
-</body></html>`);
-    win.document.close();
-  };
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -159,12 +97,6 @@ export default function SaleDetailPage() {
               <span className="rounded-full bg-error-50 px-2.5 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15 dark:text-error-400">Needs review</span>
             )}
           </div>
-        </div>
-        <div className="flex gap-3">
-          <button onClick={printReceipt} className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">Print receipt</button>
-          {sale.status !== "VOID" && can("OWNER", "MANAGER") && (
-            <button onClick={voidSale} disabled={busy} className="rounded-lg border border-error-500 px-4 py-2.5 text-sm font-medium text-error-500 hover:bg-error-50 disabled:opacity-60 dark:hover:bg-error-500/10">Void</button>
-          )}
         </div>
       </div>
 
@@ -256,6 +188,3 @@ export default function SaleDetailPage() {
   );
 }
 
-function escapeHtml(s: string): string {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
-}
