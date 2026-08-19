@@ -159,7 +159,7 @@ export default function PerformancePage() {
   const labelFor = (list: { value: string; label: string }[], v: string) =>
     list.find((t) => t.value === v)?.label ?? v;
 
-  /* Daily takings, each day's bar split by how it was paid. */
+  /* Daily takings, one line per way of paying. */
   const dayNumbers = (report?.byDay ?? []).map((d) => String(Number(d.date.slice(8, 10))));
   const fullDates = (report?.byDay ?? []).map((d) => dayLabel(d.date));
   const dailySeries = paymentTypes.map((t) => ({
@@ -167,23 +167,40 @@ export default function PerformancePage() {
     data: (report?.byDay ?? []).map((d) => Number(d[t.value] ?? 0) / 100),
   }));
 
+  /**
+   * Built to the same conventions as the template's line chart
+   * (components/charts/line/LineChartOne): straight 2px strokes, no toolbar,
+   * markers only on hover, horizontal gridlines only, a bare category axis.
+   *
+   * One departure. That component renders as an area with a gradient fill,
+   * which works for its two series and would not for five — filled areas drawn
+   * over each other hide whichever line is behind, and no fill opacity fixes
+   * that. Strokes alone keep all five payment types readable.
+   */
   const dailyOptions: ApexOptions = {
     chart: {
-      type: "bar",
-      stacked: true,
+      type: "line",
       fontFamily: "Outfit, sans-serif",
       toolbar: { show: false },
       background: "transparent",
     },
     colors,
-    // A 2px gap in the surface colour separates the stacked segments — a gap,
-    // not a border, so nothing gains an outline it didn't earn.
-    stroke: { show: true, width: 2, colors: [surface] },
-    plotOptions: {
-      bar: { columnWidth: "60%", borderRadius: 4, borderRadiusApplication: "end" },
+    stroke: { curve: "straight", width: 2 },
+    // Full strength. ApexCharts otherwise draws line strokes at 0.85 opacity,
+    // which lightens every hue against the surface — and these were checked for
+    // colour-vision separation at their stated values, not at 85% of them.
+    fill: { opacity: 1 },
+    markers: {
+      size: 0,
+      strokeColors: surface,
+      strokeWidth: 2,
+      // A 2px surface ring on the hovered point, so it reads as separate from
+      // whatever line it crosses.
+      hover: { size: 6 },
     },
     dataLabels: { enabled: false },
     xaxis: {
+      type: "category",
       // The day number alone. A full month of "19 Aug" labels overlaps every
       // neighbour below about 1200px wide — measured, not guessed — and the
       // month is already named by the range above the chart.
@@ -196,6 +213,7 @@ export default function PerformancePage() {
       },
       axisBorder: { show: false },
       axisTicks: { show: false },
+      tooltip: { enabled: false },
     },
     yaxis: {
       labels: {
@@ -207,6 +225,7 @@ export default function PerformancePage() {
       borderColor: gridInk,
       strokeDashArray: 0, // solid hairlines; dashes read as a threshold
       xaxis: { lines: { show: false } },
+      yaxis: { lines: { show: true } },
     },
     legend: {
       position: "top",
@@ -378,10 +397,15 @@ export default function PerformancePage() {
             <div className={`${cardClass} p-6`}>
               <h2 className="font-semibold text-gray-800 dark:text-white/90">Taken each day</h2>
               <p className="mb-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Each day's bar split by how it was paid.
+                One line per way of paying. Hover a day for the exact figures.
               </p>
-              <div className="min-w-0 overflow-x-auto">
-                <Chart options={dailyOptions} series={dailySeries} type="bar" height={340} />
+              {/* The template's own wrapper: give the plot a wide floor and let
+                  it scroll inside the card, rather than squeezing a month of
+                  days into whatever width is left. */}
+              <div className="min-w-0 max-w-full overflow-x-auto custom-scrollbar">
+                <div className="min-w-[1000px]">
+                  <Chart options={dailyOptions} series={dailySeries} type="line" height={340} />
+                </div>
               </div>
             </div>
 
