@@ -24,19 +24,17 @@ const DEFAULT_LOGOS = {
   logoDark: "/images/logo/logo-dark.svg",
   iconLight: "/images/logo/logo-icon.svg",
   iconDark: "/images/logo/logo-icon-dark.svg",
-  authLogo: "/images/logo/auth-logo.svg",
 } as const;
 
 export type LogoSlotName = keyof typeof DEFAULT_LOGOS;
 
 /**
- * The sign-in screen runs before we know who's signing in, so the shop's name
- * and sign-in logo are remembered on this device from the last session. Only
- * those two are cached — the rest arrive with the settings once signed in.
+ * The shop's name is remembered on this device so a signed-out screen can
+ * still greet someone by it. The sign-in artwork is fixed and needs no cache.
  */
 const CACHE_KEY = "ccc.branding";
 
-type Branding = { name?: string; authLogo?: string | null };
+type Branding = { name?: string };
 
 function readCache(): Branding {
   try {
@@ -50,7 +48,7 @@ function writeCache(store: Store) {
   try {
     localStorage.setItem(
       CACHE_KEY,
-      JSON.stringify({ name: store.name, authLogo: store.authLogo ?? null })
+      JSON.stringify({ name: store.name })
     );
   } catch {
     // A full or blocked localStorage just means the sign-in screen shows defaults.
@@ -86,7 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const s = await stores.settings();
       setStore(s);
       writeCache(s);
-      setBranding({ name: s.name, authLogo: s.authLogo ?? null });
+      setBranding({ name: s.name });
     } catch {
       setStore(null); // fall back to the bundled artwork
     }
@@ -101,10 +99,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (slot: LogoSlotName) => {
       const own = store?.[slot];
       if (own) return own;
-      if (slot === "authLogo" && branding.authLogo) return branding.authLogo;
       return DEFAULT_LOGOS[slot];
     },
-    [store, branding]
+    [store]
   );
 
   const value = useMemo(

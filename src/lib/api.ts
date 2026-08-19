@@ -601,7 +601,6 @@ export interface Store {
   logoDark?: string | null;
   iconLight?: string | null;
   iconDark?: string | null;
-  authLogo?: string | null;
   address?: string | null;
   phone?: string | null;
   website?: string | null;

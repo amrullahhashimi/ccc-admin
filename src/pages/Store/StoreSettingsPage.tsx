@@ -336,7 +336,6 @@ export default function StoreSettingsPage() {
     logoDark: s.logoDark ?? null,
     iconLight: s.iconLight ?? null,
     iconDark: s.iconDark ?? null,
-    authLogo: s.authLogo ?? null,
   });
 
   useEffect(() => {

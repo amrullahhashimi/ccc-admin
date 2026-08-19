@@ -13,6 +13,9 @@ const { maskToken } = clover;
 
 /**
  * The logo slots the app actually uses, with the size each is drawn at.
+ *
+ * The sign-in screen is not among them: it runs before anyone has signed in,
+ * so there is no store to read a logo from. It uses fixed artwork instead.
  * The settings page renders its upload boxes straight from this, so the advice
  * shown to the shop can't drift from what the code enforces.
  *
@@ -48,13 +51,6 @@ const LOGO_SLOTS = {
     width: 32,
     height: 32,
     maxKb: 100,
-  },
-  authLogo: {
-    label: "Sign-in screen",
-    use: "The large logo beside the sign-in form.",
-    width: 231,
-    height: 48,
-    maxKb: 300,
   },
 };
 
