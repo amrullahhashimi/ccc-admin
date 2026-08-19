@@ -428,7 +428,9 @@ function SerialsTab({
 
   const UnitTable = ({ list, muted }: { list: ProductUnit[]; muted?: boolean }) => (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      {/* Eleven columns will not fit beside the pricing panel. Given a floor they
+          scroll within this panel; without one they crush to unreadable slivers. */}
+      <table className="w-full min-w-[64rem]">
         <thead className="border-b border-gray-200 dark:border-gray-800">
           <tr className="text-left text-xs font-medium uppercase tracking-wider text-gray-500">
             <th className="px-5 py-3">Serial</th>
@@ -539,7 +541,10 @@ function SerialsTab({
           )}
         </div>
         <form onSubmit={submit} className="space-y-4 p-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* [&>*]:min-w-0 — a select is as wide as its longest option unless its
+              grid cell is allowed to shrink, so one long vendor name would widen
+              the whole column and push the page sideways. */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
             <div className="lg:col-span-2">
               <label className={labelClass}>Serial <span className="text-error-500">*</span></label>
               <input className={inputClass} value={form.serial} onChange={(e) => set("serial", e.target.value)} autoFocus />
@@ -560,7 +565,7 @@ function SerialsTab({
             <div>
               <label className={labelClass}>Vendor</label>
               <div className="flex gap-2">
-                <select className={inputClass} value={form.vendorId} onChange={(e) => set("vendorId", e.target.value)}>
+                <select className={`${inputClass} min-w-0 flex-1`} value={form.vendorId} onChange={(e) => set("vendorId", e.target.value)}>
                   <option value="">—</option>
                   {vendorOptions.map((v) => (<option key={v.id} value={v.id}>{v.name}</option>))}
                 </select>
@@ -878,7 +883,11 @@ export default function ProductDetailPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
-        <div className="space-y-5">
+        {/* min-w-0: a grid track is min-width:auto by default, so it grows to fit
+            its widest child and the whole page scrolls sideways. The tables inside
+            already scroll on their own — this lets them, instead of pushing the
+            pricing column off the edge. */}
+        <div className="min-w-0 space-y-5">
           <div className="flex gap-1 border-b border-gray-200 dark:border-gray-800">
             {tabs.map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)} className={`border-b-2 px-4 py-2.5 text-sm font-medium transition ${activeTab === key ? "border-brand-500 text-brand-500" : "border-transparent text-gray-500 hover:text-gray-800 dark:hover:text-white/90"}`}>
