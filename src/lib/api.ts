@@ -656,6 +656,60 @@ export const stores = {
   disconnectClover: () => request<CloverStatus>("/api/stores/clover", { method: "DELETE" }),
 };
 
+/* ---------------------------- daily performance ---------------------------- */
+
+export interface PerformanceEntry {
+  id: string;
+  /** The trading day, as YYYY-MM-DD — no time, so a day means one thing everywhere. */
+  date: string;
+  saleType: string;
+  paymentType: string;
+  amountCents: number;
+  note?: string | null;
+  user?: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+/** One day's takings split by payment type, keyed by the payment type's value. */
+export type PerformanceDay = { date: string } & Record<string, number | string>;
+
+export interface PerformanceReport {
+  from: string;
+  to: string;
+  entries: PerformanceEntry[];
+  /** Ascending by date, for the chart's x-axis. */
+  byDay: PerformanceDay[];
+  byPaymentType: Record<string, number>;
+  bySaleType: Record<string, number>;
+  totalCents: number;
+  count: number;
+}
+
+export interface PerformanceOptions {
+  saleTypes: { value: string; label: string }[];
+  /** In the order the chart assigns its colour slots. */
+  paymentTypes: { value: string; label: string }[];
+}
+
+export interface PerformanceInput {
+  date: string;
+  saleType: string;
+  paymentType: string;
+  /** Dollars as typed; the API stores cents. */
+  amount: string;
+  note?: string;
+}
+
+export const performance = {
+  options: () => request<PerformanceOptions>("/api/performance/options"),
+  report: (from: string, to: string) =>
+    request<PerformanceReport>(`/api/performance?from=${from}&to=${to}`),
+  add: (data: PerformanceInput) =>
+    request<PerformanceEntry>("/api/performance", { method: "POST", ...body(data) }),
+  remove: (id: string) =>
+    request<{ ok: true }>(`/api/performance/${id}`, { method: "DELETE" }),
+};
+
 /* ------------------------ register sales (Clover) ------------------------ */
 
 /** Where the automatic register-sale sync has got to. */

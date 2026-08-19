@@ -86,6 +86,7 @@ app.use("/api/stores", requireLogin, requireStore, require("./routes/stores")(pr
 app.use("/api/sharing", requireLogin, requireStore, require("./routes/sharing")(prisma, requireRole));
 app.use("/api/master", requireLogin, require("./routes/master")(prisma));
 app.use("/api/tools", requireLogin, requireStore, require("./routes/tools")(prisma));
+app.use("/api/performance", requireLogin, requireStore, require("./routes/performance")(prisma, requireRole));
 app.use("/api/clover", requireLogin, requireStore, require("./routes/clover-merchant")(prisma, requireRole));
 app.use("/api/track", require("./routes/track")(prisma));
 app.use("/oauth", require("./routes/clover")());

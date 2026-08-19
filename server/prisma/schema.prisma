@@ -62,6 +62,7 @@ model Store {
   sales      Sale[]
   layaways   Layaway[]
   invoices   Invoice[]
+  performance PerformanceEntry[]
 
   sharesGranted  StoreShare[] @relation("SharingStore")
   sharesReceived StoreShare[] @relation("ViewingStore")
@@ -118,6 +119,7 @@ model User {
   ticketsAssigned Ticket[] @relation("Technician")
 
   @@index([storeId])
+  performance PerformanceEntry[]
 }
 
 model Location {
@@ -494,6 +496,36 @@ model Payment {
   method      String // CASH | CARD | ETRANSFER | OTHER
   reference   String? // Clover payment id
   createdAt   DateTime @default(now())
+}
+
+/* --------------------------- daily performance --------------------------- */
+
+/// One takings figure as the shop logs it at the end of a day.
+///
+/// Kept apart from Sale on purpose: this is what the shop counted, entered by
+/// hand, and it is allowed to disagree with what the tills recorded. Folding
+/// the two together would make each unable to check the other.
+model PerformanceEntry {
+  id String @id @default(cuid())
+
+  /// The trading day it belongs to, not the moment it was typed in.
+  date DateTime @db.Date
+
+  saleType    String // SERVICE | INVENTORY
+  paymentType String // CASH | CREDIT_CARD | DEBIT_CARD | CHEQUE | ETRANSFER
+  amountCents Int
+  note        String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, date])
 }
 
 /* ----------------------------- layaway ----------------------------- */
