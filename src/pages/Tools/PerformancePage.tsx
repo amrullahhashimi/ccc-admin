@@ -168,6 +168,23 @@ export default function PerformancePage() {
   }));
 
   /**
+   * The scale runs in $100 steps, up to the next hundred above the biggest
+   * figure on the chart.
+   *
+   * Capped, because the step is fixed and the axis is not: a $9,000 day would
+   * otherwise ask for ninety gridlines on a 340px plot, which is a grey smear
+   * with unreadable labels rather than a scale. Past the cap the steps widen
+   * so the axis stays legible — the alternative is honouring the $100 exactly
+   * and rendering something nobody can read.
+   */
+  const DAILY_STEP = 100;
+  const MAX_TICKS = 20;
+  const dailyPeak = Math.max(0, ...dailySeries.flatMap((s) => s.data));
+  const dailyStep =
+    DAILY_STEP * Math.max(1, Math.ceil(dailyPeak / DAILY_STEP / MAX_TICKS));
+  const dailyMax = Math.max(dailyStep, Math.ceil(dailyPeak / dailyStep) * dailyStep);
+
+  /**
    * The template's Line Chart 3 treatment: a thin stroke with a gradient fading
    * to nothing beneath it, no markers until hover, faint horizontal gridlines,
    * and a bare axis.
@@ -217,6 +234,12 @@ export default function PerformancePage() {
       tooltip: { enabled: false },
     },
     yaxis: {
+      // Every gridline is $100. Given as an explicit ceiling and tick count
+      // rather than a stepSize, because ApexCharts will otherwise round the
+      // scale to whatever it finds tidy and quietly land on $150s or $250s.
+      min: 0,
+      max: dailyMax,
+      tickAmount: dailyMax / dailyStep,
       labels: {
         style: { colors: axisInk, fontSize: "11px" },
         formatter: (v: number) => `$${Math.round(v)}`,
