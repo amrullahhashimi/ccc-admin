@@ -52,6 +52,30 @@ async function matchUnit(prisma, storeId, li) {
 }
 
 /**
+ * How much of an order has been handed back.
+ *
+ * Clover computes `paymentState` from whichever relations the request
+ * expanded — the same order reads OPEN, PAID or REFUNDED depending on the
+ * query — so it is treated as one signal among several rather than the
+ * answer. A refunds collection or a line item flagged refunded is concrete.
+ *
+ * Partial is called out separately: reversing a whole sale because one line
+ * of four came back would put three handsets on the shelf that never left.
+ */
+function refundState(order) {
+  const lines = order.lineItems?.elements ?? [];
+  const refundedLines = lines.filter((li) => li.refunded).length;
+  const hasRefunds = (order.refunds?.elements ?? []).length > 0;
+
+  const fully =
+    order.paymentState === "REFUNDED" ||
+    (lines.length > 0 && refundedLines === lines.length) ||
+    (hasRefunds && refundedLines === 0 && lines.length === 0);
+
+  return { fully, partly: !fully && (refundedLines > 0 || hasRefunds) };
+}
+
+/**
  * Undo a sale the register has since refunded.
  *
  * Every serial the sale consumed goes back on the shelf — IN_STOCK, unlinked
@@ -114,8 +138,16 @@ async function importOrder({ prisma, store, order }) {
   const already = await prisma.sale.findUnique({ where: { cloverOrderId: order.id } });
 
   if (already) {
-    if (order.paymentState === "REFUNDED" && already.status !== "REFUNDED") {
+    const refund = refundState(order);
+    if (refund.fully && already.status !== "REFUNDED") {
       return refundSale({ prisma, store, sale: already });
+    }
+    if (refund.partly) {
+      return {
+        imported: false,
+        reason: "partly refunded on Clover — needs checking by hand",
+        reference: order.id,
+      };
     }
     return { imported: false, reason: "already imported", reference: order.id };
   }
@@ -219,4 +251,4 @@ async function importOrder({ prisma, store, order }) {
   };
 }
 
-module.exports = { importOrder, refundSale, matchUnit, qtyOf };
+module.exports = { importOrder, refundSale, refundState, matchUnit, qtyOf };
