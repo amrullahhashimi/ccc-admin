@@ -30,6 +30,7 @@ import SaleDetailPage from "./pages/Sales/Saledetailpage";
 import ToolsHome from "./pages/Tools/ToolsHome";
 import ImeiCheckerPage from "./pages/Tools/ImeiCheckerPage";
 import PerformancePage from "./pages/Tools/PerformancePage";
+import CashCalculatorPage from "./pages/Tools/CashCalculatorPage";
 import StoreSettingsPage from "./pages/Store/StoreSettingsPage";
 import SharingPage from "./pages/Store/SharingPage";
 import MasterPage from "./pages/Master/MasterPage";
@@ -93,6 +94,7 @@ export default function App() {
             <Route path="/tools" element={<ToolsHome />} />
             <Route path="/tools/imei" element={<ImeiCheckerPage />} />
             <Route path="/tools/performance" element={<PerformancePage />} />
+            <Route path="/tools/cash" element={<CashCalculatorPage />} />
             <Route path="/store" element={<StoreSettingsPage />} />
             <Route path="/store/sharing" element={<SharingPage />} />
             <Route path="/master" element={<MasterPage />} />
