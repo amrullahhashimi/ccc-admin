@@ -728,18 +728,22 @@ function DetailsTab({ product, meta, onSaved }: { product: Product; meta: Meta |
               {meta?.categories.map((c) => (<option key={c.id} value={c.id}>{c.label ?? c.name}</option>))}
             </select>
           </div>
-          <div>
-            <label className={labelClass}>Default vendor</label>
-            <select className={inputClass} value={form.vendorId} onChange={(e) => set("vendorId", e.target.value)}>
-              <option value="">—</option>
-              {meta?.vendors.map((v) => (<option key={v.id} value={v.id}>{v.name}</option>))}
-            </select>
-          </div>
           <div><label className={labelClass}>Reorder at</label><input type="number" className={inputClass} value={form.reorderAt} onChange={(e) => set("reorderAt", e.target.value)} /></div>
-          <div><label className={labelClass}>Cost price</label><input type="number" step="0.01" className={inputClass} value={form.cost} onChange={(e) => set("cost", e.target.value)} /></div>
-          <div><label className={labelClass}>Online price</label><input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} /></div>
-          <div className="sm:col-span-2 flex flex-wrap items-end gap-6">
-            <div className="min-w-[10rem] flex-1">
+
+          {/* The three prices and the two flags read as one decision, so they share
+              a full-width row. Flex rather than a five-column grid: the prices
+              split the space evenly while each checkbox takes only the width its
+              label needs, instead of being handed a column as wide as an input. */}
+          <div className="sm:col-span-2 flex flex-wrap items-end gap-5">
+            <div className="min-w-[9rem] flex-1">
+              <label className={labelClass}>Cost price</label>
+              <input type="number" step="0.01" className={inputClass} value={form.cost} onChange={(e) => set("cost", e.target.value)} />
+            </div>
+            <div className="min-w-[9rem] flex-1">
+              <label className={labelClass}>Online price</label>
+              <input type="number" step="0.01" className={inputClass} value={form.onlinePrice} onChange={(e) => set("onlinePrice", e.target.value)} />
+            </div>
+            <div className="min-w-[9rem] flex-1">
               <label className={labelClass}>Sale price</label>
               <input type="number" step="0.01" className={inputClass} value={form.salePrice} onChange={(e) => set("salePrice", e.target.value)} />
             </div>
