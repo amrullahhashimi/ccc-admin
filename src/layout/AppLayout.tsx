@@ -13,8 +13,13 @@ const LayoutContent: React.FC = () => {
         <AppSidebar />
         <Backdrop />
       </div>
+      {/* min-w-0: a flex child is min-width:auto by default, so anything wide
+          inside a page — a table, a chart — stretches this column past the
+          viewport and scrolls the whole shell sideways, sidebar and all.
+          Allowing it to shrink lets each page's own overflow container do the
+          scrolling instead. */}
       <div
-        className={`flex-1 transition-all duration-300 ease-in-out ${
+        className={`min-w-0 flex-1 transition-all duration-300 ease-in-out ${
           isExpanded || isHovered ? "lg:ml-[290px]" : "lg:ml-[90px]"
         } ${isMobileOpen ? "ml-0" : ""}`}
       >

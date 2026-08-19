@@ -195,7 +195,8 @@ export default function PerformancePage() {
   function printDaily() {
     printChart({
       container: dailyChartRef.current,
-      title: `Taken each day — ${store?.name ?? ""}`.trim().replace(/—s*$/, "").trim(),
+      // Drop the dash when there's no shop name to put after it.
+      title: store?.name ? `Taken each day — ${store.name}` : "Taken each day",
       subtitle: report ? `${dayLabel(report.from)} to ${dayLabel(report.to)}` : undefined,
       legend: paymentTypes.map((t, i) => ({ label: t.label, color: colors[i % colors.length] })),
       facts: [
@@ -240,13 +241,29 @@ export default function PerformancePage() {
    */
   const DAILY_STEP = 100;
   const MAX_TICKS = 20;
-  const dailyPeak = Math.max(
+  /** Round a peak up to a readable ladder of $100 steps. */
+  const scaleFor = (peak: number) => {
+    const step = DAILY_STEP * Math.max(1, Math.ceil(peak / DAILY_STEP / MAX_TICKS));
+    return { step, max: Math.max(step, Math.ceil(peak / step) * step) };
+  };
+
+  // Lines are drawn one over another, so the tallest point is the biggest
+  // single payment type. Bars are stacked, so it is the day's whole takings.
+  // Each view gets the ceiling its own drawing needs.
+  const linePeak = Math.max(
     0,
     ...dailySeries.flatMap((s) => s.data.filter((v): v is number => v != null))
   );
-  const dailyStep =
-    DAILY_STEP * Math.max(1, Math.ceil(dailyPeak / DAILY_STEP / MAX_TICKS));
-  const dailyMax = Math.max(dailyStep, Math.ceil(dailyPeak / dailyStep) * dailyStep);
+  const barPeak = Math.max(
+    0,
+    ...days.map((_, i) =>
+      dailySeries.reduce((sum, s) => sum + (s.data[i] ?? 0), 0)
+    )
+  );
+  const lineScale = scaleFor(linePeak);
+  const barScale = scaleFor(barPeak);
+  const dailyStep = lineScale.step;
+  const dailyMax = lineScale.max;
 
   /**
    * The template's Line Chart 3 treatment: a thin stroke with a gradient fading
@@ -341,18 +358,29 @@ export default function PerformancePage() {
    */
   const dailyBarOptions: ApexOptions = {
     ...dailyOptions,
-    chart: { ...dailyOptions.chart, type: "bar" },
+    // Stacked, not grouped. Five bars per day across a month is 155 columns,
+    // which measures about 2px each once the chart fits the screen — a
+    // hairline, not a bar. One column per day is 20-odd pixels and still
+    // carries the whole split, as segments instead of neighbours.
+    chart: { ...dailyOptions.chart, type: "bar", stacked: true },
     stroke: { show: true, width: 2, colors: ["transparent"] },
     fill: { type: "solid", opacity: 1 },
     plotOptions: {
       bar: {
-        columnWidth: "80%",
+        columnWidth: "70%",
         borderRadius: 4,
-        // Rounded at the top, square where it meets the baseline.
+        // Rounded at the top of the stack, square everywhere the segments meet.
         borderRadiusApplication: "end",
+        borderRadiusWhenStacked: "last",
       },
     },
     markers: { size: 0 },
+    yaxis: {
+      ...dailyOptions.yaxis,
+      min: 0,
+      max: barScale.max,
+      tickAmount: barScale.max / barScale.step,
+    },
   };
 
   /* The same money, totalled by payment type — the split the day chart can't state outright. */
@@ -547,29 +575,21 @@ export default function PerformancePage() {
                 </div>
               </div>
 
-              {/* The template's own wrapper: give the plot a wide floor and let
-                  it scroll inside the card, rather than squeezing a month of
-                  days into whatever width is left. */}
-              <div
-                ref={dailyChartRef}
-                className="mt-3 min-w-0 max-w-full overflow-x-auto custom-scrollbar"
-              >
-                {/* Bars need more room than lines: a month split five ways is
-                    155 columns, which at the lines' width measures under 6px
-                    each. The wider floor puts them back to a bar you can see,
-                    and the card scrolls. */}
-                <div className={shape === "bar" ? "min-w-[1700px]" : "min-w-[1000px]"}>
-                  <Chart
-                    // Keyed by shape: ApexCharts animates between types rather
-                    // than rebuilding, and half-morphed bars are worse than a
-                    // clean redraw.
-                    key={shape}
-                    options={shape === "area" ? dailyOptions : dailyBarOptions}
-                    series={dailySeries}
-                    type={shape}
-                    height={340}
-                  />
-                </div>
+              {/* No pixel floor. The chart is sized by the card, so a month of
+                  days fits the screen instead of pushing the page sideways.
+                  Bars go thin on a narrow window — that is the cost of fitting,
+                  and the axis drops labels before it lets them overlap. */}
+              <div ref={dailyChartRef} className="mt-3 min-w-0 max-w-full">
+                <Chart
+                  // Keyed by shape: ApexCharts animates between types rather
+                  // than rebuilding, and half-morphed bars are worse than a
+                  // clean redraw.
+                  key={shape}
+                  options={shape === "area" ? dailyOptions : dailyBarOptions}
+                  series={dailySeries}
+                  type={shape}
+                  height={340}
+                />
               </div>
             </div>
 
