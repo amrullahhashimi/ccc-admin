@@ -256,23 +256,14 @@ export default function PerformancePage() {
     return { step, max: Math.max(step, Math.ceil(target / step) * step) };
   };
 
-  // Lines are drawn one over another, so the tallest point is the biggest
-  // single payment type. Bars are stacked, so it is the day's whole takings.
-  // Each view gets the ceiling its own drawing needs.
-  const linePeak = Math.max(
+  // Both views draw each payment type on its own — lines over one another,
+  // bars side by side — so the tallest mark in either is the biggest single
+  // figure, and one ceiling serves both. Switching view keeps the same scale.
+  const dailyPeak = Math.max(
     0,
     ...dailySeries.flatMap((s) => s.data.filter((v): v is number => v != null))
   );
-  const barPeak = Math.max(
-    0,
-    ...days.map((_, i) =>
-      dailySeries.reduce((sum, s) => sum + (s.data[i] ?? 0), 0)
-    )
-  );
-  const lineScale = scaleFor(linePeak);
-  const barScale = scaleFor(barPeak);
-  const dailyStep = lineScale.step;
-  const dailyMax = lineScale.max;
+  const { step: dailyStep, max: dailyMax } = scaleFor(dailyPeak);
 
   /**
    * The template's Line Chart 3 treatment: a thin stroke with a gradient fading
@@ -367,30 +358,36 @@ export default function PerformancePage() {
    */
   const dailyBarOptions: ApexOptions = {
     ...dailyOptions,
-    // Stacked, not grouped. Five bars per day across a month is 155 columns,
-    // which measures about 2px each once the chart fits the screen — a
-    // hairline, not a bar. One column per day is 20-odd pixels and still
-    // carries the whole split, as segments instead of neighbours.
-    chart: { ...dailyOptions.chart, type: "bar", stacked: true },
+    // Grouped: each payment type gets its own bar under the date, side by side.
+    // Five bars a day across a month is 155 of them, far more than a screen's
+    // width divides into legibly — so the plot is given the width it needs and
+    // the card scrolls. It is the card that scrolls, not the page.
+    chart: { ...dailyOptions.chart, type: "bar", stacked: false },
+    // A 2px gap in the surface colour between neighbours, rather than an
+    // outline around each bar.
     stroke: { show: true, width: 2, colors: ["transparent"] },
     fill: { type: "solid", opacity: 1 },
     plotOptions: {
       bar: {
-        columnWidth: "70%",
+        columnWidth: "85%",
         borderRadius: 4,
-        // Rounded at the top of the stack, square everywhere the segments meet.
+        // Rounded at the top, square where it meets the baseline.
         borderRadiusApplication: "end",
-        borderRadiusWhenStacked: "last",
       },
     },
     markers: { size: 0 },
-    yaxis: {
-      ...dailyOptions.yaxis,
-      min: 0,
-      max: barScale.max,
-      tickAmount: barScale.max / barScale.step,
-    },
+    // Grouped bars stand alone, so the tallest is the biggest single payment
+    // type — the same ceiling the lines use. No override needed.
   };
+
+  /**
+   * How wide the bar view needs to be to stay readable.
+   *
+   * Five bars plus their gaps want roughly 58px per day. Below that they thin
+   * out to hairlines; measured at a screen's width a full month came out at
+   * 2px a bar. The lines view has no such need — it fills whatever it is given.
+   */
+  const barMinWidth = Math.max(640, days.length * 58);
 
   /* The same money, totalled by payment type — the split the day chart can't state outright. */
   const paymentTotals = paymentTypes.map((t) => (report?.byPaymentType?.[t.value] ?? 0) / 100);
@@ -576,11 +573,11 @@ export default function PerformancePage() {
                 </div>
               </div>
 
-              {/* No pixel floor. The chart is sized by the card, so a month of
-                  days fits the screen instead of pushing the page sideways.
-                  Bars go thin on a narrow window — that is the cost of fitting,
-                  and the axis drops labels before it lets them overlap. */}
-              <div ref={dailyChartRef} className="mt-3 min-w-0 max-w-full">
+              {/* Lines fill the card. Bars need more room than a screen has,
+                  so they get a floor and this scrolls — the card, not the
+                  page, which is what min-w-0 on the layout column buys. */}
+              <div ref={dailyChartRef} className="mt-3 min-w-0 max-w-full overflow-x-auto custom-scrollbar">
+                <div style={shape === "bar" ? { minWidth: barMinWidth } : undefined}>
                 <Chart
                   // Keyed by shape: ApexCharts animates between types rather
                   // than rebuilding, and half-morphed bars are worse than a
@@ -591,6 +588,7 @@ export default function PerformancePage() {
                   type={shape}
                   height={340}
                 />
+                </div>
               </div>
             </div>
 
