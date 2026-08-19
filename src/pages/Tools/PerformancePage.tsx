@@ -241,10 +241,19 @@ export default function PerformancePage() {
    */
   const DAILY_STEP = 100;
   const MAX_TICKS = 20;
+
+  /**
+   * The scale never shrinks below this, so an empty month still draws its
+   * ladder — $0 to $1,500 in hundreds, fifteen gridlines — instead of a blank
+   * rectangle. A chart with nothing on it should still say what it measures.
+   */
+  const FLOOR_CEILING = 1500;
+
   /** Round a peak up to a readable ladder of $100 steps. */
   const scaleFor = (peak: number) => {
-    const step = DAILY_STEP * Math.max(1, Math.ceil(peak / DAILY_STEP / MAX_TICKS));
-    return { step, max: Math.max(step, Math.ceil(peak / step) * step) };
+    const target = Math.max(peak, FLOOR_CEILING);
+    const step = DAILY_STEP * Math.max(1, Math.ceil(target / DAILY_STEP / MAX_TICKS));
+    return { step, max: Math.max(step, Math.ceil(target / step) * step) };
   };
 
   // Lines are drawn one over another, so the tallest point is the biggest
@@ -427,7 +436,6 @@ export default function PerformancePage() {
     states: { active: { filter: { type: "none" } } },
   };
 
-  const hasData = (report?.count ?? 0) > 0;
 
   return (
     <div className="space-y-6">
@@ -527,14 +535,7 @@ export default function PerformancePage() {
       {/* Held at reduced opacity while refetching rather than replaced by a
           skeleton, so the numbers don't jump about between ranges. */}
       <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"}>
-        {!hasData ? (
-          <div className={`${cardClass} p-10 text-center`}>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {loading ? "Loading…" : "Nothing recorded for these dates yet. Add today's takings above."}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
+        <div className="space-y-6">
             <div className={`${cardClass} p-6`}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -628,6 +629,14 @@ export default function PerformancePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {!(report?.entries ?? []).length && (
+                      <tr>
+                        <td colSpan={7} className="px-5 py-10 text-center text-gray-500">
+                          {loading ? "Loading…" : "Nothing recorded for these dates yet."}
+                        </td>
+                      </tr>
+                    )}
+
                     {(report?.entries ?? []).map((e) => {
                       const slot = paymentTypes.findIndex((t) => t.value === e.paymentType);
                       return (
@@ -673,8 +682,7 @@ export default function PerformancePage() {
                 </table>
               </div>
             </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
