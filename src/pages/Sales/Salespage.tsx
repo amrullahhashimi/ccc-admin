@@ -72,21 +72,17 @@ export default function SalesPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/sales")} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back to sales">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Sales</h1>
-        </div>
+      <div className="flex justify-end">
         <button onClick={() => navigate("/sales/new")} className="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600">New sale</button>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <input className={`${inputClass} sm:max-w-xs`} value={q} onChange={(e) => setQ(e.target.value)} />
-        <div className="flex gap-1">
+      {/* Search and status filter share one line. The box gives up its width
+          first, so the row always fits the page — no sideways scroll. */}
+      <div className="flex items-center gap-3">
+        <input className={`${inputClass} min-w-0 flex-1 sm:max-w-xs`} value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="flex shrink-0 gap-1">
           {STATUSES.map((s) => (
-            <button key={s.value} onClick={() => setStatus(s.value)} className={`rounded-lg px-4 py-2.5 text-sm font-medium transition ${status === s.value ? "bg-brand-500 text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"}`}>{s.label}</button>
+            <button key={s.value} onClick={() => setStatus(s.value)} className={`whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition sm:px-4 ${status === s.value ? "bg-brand-500 text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"}`}>{s.label}</button>
           ))}
         </div>
       </div>

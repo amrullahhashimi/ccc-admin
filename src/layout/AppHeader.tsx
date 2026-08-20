@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Link } from "react-router";
 import { useSidebar } from "../context/SidebarContext";
+import HeaderBreadcrumb from "../components/common/HeaderBreadcrumb";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import UserDropdown from "../components/header/UserDropdown";
 
@@ -66,6 +67,10 @@ const AppHeader: React.FC = () => {
             )}
             {/* Cross Icon */}
           </button>
+
+          {/* Where you are lives up here next to the toggle, so each page can
+              start straight in on its own controls. */}
+          <HeaderBreadcrumb />
 
           {/* Below lg this had no size on it at all, so it drew at whatever the
               uploaded file's own dimensions were — a wide logo filled the

@@ -437,8 +437,7 @@ export default function PerformancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Performance</h1>
-        <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+        <p className="max-w-2xl text-sm text-gray-500 dark:text-gray-400">
           What the shop took each day, entered by hand. Kept separate from the tills, so the two can
           be checked against each other rather than one just repeating the other.
         </p>

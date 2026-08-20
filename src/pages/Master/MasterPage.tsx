@@ -88,8 +88,7 @@ export default function MasterPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Master</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Every store on the system. Open one to look through its records, or add its staff.
             Nothing here can be edited or deleted — it's a window, not a set of controls.
           </p>

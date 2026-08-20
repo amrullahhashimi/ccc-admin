@@ -53,23 +53,17 @@ export default function ServicePage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/service")} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back to service">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Service orders</h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{rows.length} {rows.length === 1 ? "order" : "orders"}</p>
-          </div>
-        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{rows.length} {rows.length === 1 ? "order" : "orders"}</p>
         <button onClick={() => navigate("/service/new")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
           New service
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <input className={`${inputClass} flex-1 min-w-[220px]`} value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className={`${inputClass} w-auto`} value={status} onChange={(e) => setStatus(e.target.value)}>
+      {/* Search and status filter share one line. Both can shrink, so the row
+          always fits the page width — no sideways scroll. */}
+      <div className="flex items-center gap-3">
+        <input className={`${inputClass} min-w-0 flex-1`} value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className={`${inputClass} w-auto min-w-0`} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
           {SERVICE_STATUSES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}
         </select>

@@ -128,9 +128,6 @@ export default function CashCalculatorPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Cash calculator</h1>
-      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <div className={cardClass}>
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">

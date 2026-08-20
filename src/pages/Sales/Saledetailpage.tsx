@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import { money, saleRef, sales as salesApi, type Customer, type Sale } from "../../lib/api";
 
 const panelClass = "rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
@@ -42,7 +42,6 @@ function statusBadge(status: string) {
 
 export default function SaleDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
 
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,22 +96,15 @@ export default function SaleDetailPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/sales")} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back to sales">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Sale {saleRef(sale)}</h1>
-            {statusBadge(sale.status)}
-            {sale.source === "CLOVER" && (
-              <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">Clover</span>
-            )}
-            {sale.needsReview && (
-              <span className="rounded-full bg-error-50 px-2.5 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15 dark:text-error-400">Needs review</span>
-            )}
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">Sale {saleRef(sale)}</h1>
+        {statusBadge(sale.status)}
+        {sale.source === "CLOVER" && (
+          <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">Clover</span>
+        )}
+        {sale.needsReview && (
+          <span className="rounded-full bg-error-50 px-2.5 py-0.5 text-xs font-medium text-error-600 dark:bg-error-500/15 dark:text-error-400">Needs review</span>
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">

@@ -27,8 +27,6 @@ const tiles: Tile[] = [{ name: "IMEI Checker", path: "/tools/imei", icon: PhoneI
 export default function ToolsHome() {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Tools</h1>
-
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
         {tiles.map((tile) => (
           <Link

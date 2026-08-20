@@ -59,58 +59,44 @@ export default function ItemSearchPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/inventory")}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
-            aria-label="Back to inventory"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Item search</h1>
-            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-              {rows.length} {rows.length === 1 ? "product" : "products"} · {totalUnits} in stock ·{" "}
-              {money(stockValue)} at cost
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={() => navigate("/inventory/new")}
-          className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
-        >
-          New item
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
+      {/* Search, both filters and New item share one line. The widths are
+          proportions rather than fixed sizes, and every one of them may shrink,
+          so the row fits the page instead of scrolling sideways. */}
+      <div className="flex items-center gap-3">
         <input
-          className={`${inputClass} min-w-[220px] flex-1`}
+          className={`${inputClass} min-w-0 basis-[30%]`}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           autoFocus
         />
-        <select className={`${inputClass} w-auto`} value={location} onChange={(e) => setLocation(e.target.value)}>
+        <select className={`${inputClass} min-w-0 basis-[25%]`} value={location} onChange={(e) => setLocation(e.target.value)}>
           <option value="">All locations</option>
           {meta?.locations.map((l) => (
             <option key={l.id} value={l.id}>{l.name}</option>
           ))}
         </select>
-        <select className={`${inputClass} w-auto`} value={condition} onChange={(e) => setCondition(e.target.value)}>
+        <select className={`${inputClass} min-w-0 basis-[25%]`} value={condition} onChange={(e) => setCondition(e.target.value)}>
           <option value="">Any condition</option>
           {CONDITIONS.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </select>
-        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-400">
+        <label className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-400">
           <input type="checkbox" checked={lowStock} onChange={(e) => setLowStock(e.target.checked)} />
           Low stock only
         </label>
+        <button
+          onClick={() => navigate("/inventory/new")}
+          className="ml-auto shrink-0 whitespace-nowrap rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
+        >
+          New item
+        </button>
       </div>
+
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        {rows.length} {rows.length === 1 ? "product" : "products"} · {totalUnits} in stock ·{" "}
+        {money(stockValue)} at cost
+      </p>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         {loading ? (

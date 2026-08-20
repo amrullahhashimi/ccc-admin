@@ -394,8 +394,7 @@ export default function StoreSettingsPage() {
     <div className="mx-auto max-w-3xl space-y-6">
     <form onSubmit={save} className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Store settings</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Your shop's details, the label stock you print on, and the terms printed on service
           paperwork. Sharing with other stores has its own tab.
         </p>

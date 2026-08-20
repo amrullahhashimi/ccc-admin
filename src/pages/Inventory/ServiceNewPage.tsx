@@ -579,10 +579,7 @@ export default function ServiceNewPage() {
   if (!isEdit) {
     return (
       <div className="space-y-5">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/service")} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">New service — choose customer</h1>
-        </div>
+        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">New service — choose customer</h1>
         <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
           <div className={`${panelClass} p-6`}>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -626,12 +623,9 @@ export default function ServiceNewPage() {
   return (
     <form noValidate onSubmit={(e) => { e.preventDefault(); save(); }} className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button type="button" onClick={() => navigate("/service")} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg></button>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">{isEdit ? `Service #${svc?.number}` : "New service — details"}</h1>
-            <p className="mt-0.5 text-xs text-gray-500">{headingCustomer}</p>
-          </div>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-white/90">{isEdit ? `Service #${svc?.number}` : "New service — details"}</h1>
+          <p className="mt-0.5 text-xs text-gray-500">{headingCustomer}</p>
         </div>
         <div className="flex items-center gap-3">
           {isEdit && (

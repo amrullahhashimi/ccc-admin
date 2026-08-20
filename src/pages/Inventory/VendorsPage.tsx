@@ -409,8 +409,7 @@ export default function VendorsPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Vendors</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {rows.length} {rows.length === 1 ? "vendor" : "vendors"}
           </p>
         </div>

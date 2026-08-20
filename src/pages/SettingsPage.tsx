@@ -176,9 +176,8 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Settings</h1>
         {user && (
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {user.name} · {user.email}
           </p>
         )}

@@ -63,23 +63,9 @@ export default function ArchivedItemsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate("/inventory")}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
-          aria-label="Back to inventory"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Archived items</h1>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            {rows.length} {rows.length === 1 ? "item" : "items"} out of circulation
-          </p>
-        </div>
-      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        {rows.length} {rows.length === 1 ? "item" : "items"} out of circulation
+      </p>
 
       <div>
         <label htmlFor="archive-search" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">

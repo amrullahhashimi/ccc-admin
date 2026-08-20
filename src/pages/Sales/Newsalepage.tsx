@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import { useStore } from "../../context/StoreContext";
 import { useNotify } from "../../components/ui/notify";
 import {
@@ -50,7 +49,6 @@ let keySeq = 0;
 const nextKey = () => `k${++keySeq}`;
 
 export default function NewSalePage() {
-  const navigate = useNavigate();
   const { store } = useStore(); // receipt header comes from Store settings
   const notify = useNotify();
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -304,13 +302,6 @@ export default function NewSalePage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5" aria-label="Back">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-        </button>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">New sale</h1>
-      </div>
-
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         {/* main */}
         <div className="space-y-5">

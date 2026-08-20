@@ -58,20 +58,6 @@ export default function NewItemPage() {
 
   return (
     <form onSubmit={save} className="space-y-5">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate("/inventory")}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5"
-          aria-label="Back to inventory"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">New item</h1>
-      </div>
-
       <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="sm:col-span-2">

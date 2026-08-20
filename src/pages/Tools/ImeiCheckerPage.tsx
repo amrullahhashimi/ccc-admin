@@ -130,8 +130,7 @@ export default function ImeiCheckerPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">IMEI Checker</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Dial <span className="font-mono">*#06#</span> on the phone to show its IMEI, or scan the barcode
           under the battery / on the box.
         </p>

@@ -49,8 +49,6 @@ const tiles: Tile[] = [
 export default function ServiceHome() {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Service</h1>
-
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
         {tiles.map((tile) => (
           <Link
