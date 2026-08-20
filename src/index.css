@@ -826,3 +826,73 @@ span.flatpickr-weekday,
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Safari before 16.4 — an iPad Mini 4 tops out at iPadOS 15
+ *
+ * Tailwind 4 registers its internal variables with @property and relies on the
+ * initial-value it declares there. A browser without @property support ignores
+ * those blocks entirely, so every one of these variables resolves to nothing
+ * and the declarations that use them become invalid. In practice:
+ *
+ *   border-*      -> border-style: var(--tw-border-style)  -> no borders at all
+ *   translate-*   -> an invalid transform  -> the sidebar never slides off
+ *                    screen and sits on top of the page instead
+ *   divide-*, ring-*, shadow-* -> silently dropped
+ *
+ * Declaring the same initial values on every element gives those browsers what
+ * @property gives everyone else. Utilities still win: a class beats `*` on
+ * specificity, so `border-dashed` and `translate-x-4` behave normally.
+ *
+ * Generated from the @property blocks Tailwind emits — if the build starts
+ * registering new ones with initial values, they belong here too.
+ * Declared in @layer base, not unlayered. Unlayered CSS beats anything in a
+ * cascade layer whatever the specificity, so leaving this outside a layer made
+ * it override the utilities themselves — measured: -translate-x-full resolved
+ * to 0 and nothing moved. In base, it supplies the value and utilities win.
+ * ------------------------------------------------------------------------- */
+@layer base {
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    --tw-translate-x: 0;
+    --tw-translate-y: 0;
+    --tw-translate-z: 0;
+    --tw-scale-x: 1;
+    --tw-scale-y: 1;
+    --tw-scale-z: 1;
+    --tw-rotate-x: rotateX(0);
+    --tw-rotate-y: rotateY(0);
+    --tw-rotate-z: rotateZ(0);
+    --tw-skew-x: skewX(0);
+    --tw-skew-y: skewY(0);
+    --tw-space-y-reverse: 0;
+    --tw-space-x-reverse: 0;
+    --tw-divide-x-reverse: 0;
+    --tw-divide-y-reverse: 0;
+    --tw-border-style: solid;
+    --tw-outline-style: solid;
+    --tw-shadow: 0 0 #0000;
+    --tw-inset-shadow: 0 0 #0000;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-inset-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    --tw-ring-offset-width: 0;
+    --tw-ring-offset-color: #fff;
+  }
+}
+
+/*
+ * The dimmed sheet behind the mobile sidebar.
+ *
+ * Written out rather than left to `bg-gray-900/50`, which Tailwind compiles to
+ * color-mix() — unsupported on the same browsers, where it yields a completely
+ * transparent backdrop. The drawer then floats over the page with nothing
+ * behind it and no obvious way to see it is a drawer.
+ */
+@layer components {
+  .sidebar-backdrop {
+    background-color: rgba(17, 24, 39, 0.5);
+  }
+}
