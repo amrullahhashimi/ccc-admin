@@ -42,7 +42,7 @@ module.exports = (prisma) => {
     // A shop still configured through /oauth/connect has no token on its row.
     const token = cfg.token || (await cloverStore.getAccessToken());
     const resp = await fetch(
-      `${cfg.apiBase}/v3/merchants/${merchantId}/orders/${orderId}?expand=lineItems,payments,refunds`,
+      `${cfg.apiBase}/v3/merchants/${merchantId}/orders/${orderId}?expand=lineItems,payments.tender,payments.cardTransaction,refunds`,
       { headers: { authorization: `Bearer ${token}`, accept: "application/json" } }
     );
     if (!resp.ok) throw new Error(`Clover order fetch failed (${resp.status}).`);

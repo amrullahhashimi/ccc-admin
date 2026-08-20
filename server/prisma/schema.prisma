@@ -493,8 +493,16 @@ model Payment {
   layaway   Layaway? @relation(fields: [layawayId], references: [id])
 
   amountCents Int
-  method      String // CASH | CARD | ETRANSFER | OTHER
-  reference   String? // Clover payment id
+
+  /// CASH | CREDIT_CARD | DEBIT_CARD | CHEQUE | ETRANSFER | OTHER.
+  /// CARD survives on payments taken before credit and debit were told apart.
+  method String
+
+  /// How it was paid, in words, when the till knew more than the method:
+  /// "Interac ····9303, contactless". Null for anything typed in by hand.
+  details String?
+
+  reference String? // Clover payment id
   createdAt   DateTime @default(now())
 }
 

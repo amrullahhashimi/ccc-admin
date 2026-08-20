@@ -13,6 +13,79 @@
  * when the catalogue and the shelf have drifted apart.
  */
 
+/**
+ * Clover's tender labelKey, mapped to how this app names a payment method.
+ *
+ * Keyed on labelKey rather than the label, because the label is free text a
+ * merchant can rename — this account has one simply called "Etransfer", with
+ * no key at all, which is why the label is still consulted as a fallback.
+ */
+const TENDER_METHODS = {
+  "com.clover.tender.cash": "CASH",
+  "com.clover.tender.credit_card": "CREDIT_CARD",
+  "com.clover.tender.debit_card": "DEBIT_CARD",
+  "com.clover.tender.external_pin_debit": "DEBIT_CARD",
+  "com.clover.tender.check": "CHEQUE",
+};
+
+/** Entry types read like shouting; these are how staff describe them. */
+const ENTRY_TYPES = {
+  EMV_CONTACTLESS: "contactless",
+  CONTACTLESS: "contactless",
+  EMV_CONTACT: "chip",
+  CHIP: "chip",
+  SWIPE: "swiped",
+  SWIPED: "swiped",
+  KEYED: "keyed in",
+  MANUAL: "keyed in",
+};
+
+/**
+ * How one Clover payment was made: a method this app understands, plus the
+ * description worth showing beside it.
+ *
+ * Everything used to be recorded as CARD, which turned a drawer full of cash
+ * into card takings on every report that asked.
+ */
+function methodOf(payment) {
+  const tender = payment?.tender ?? {};
+  const label = String(tender.label ?? "").trim();
+  const card = payment?.cardTransaction;
+
+  let method = TENDER_METHODS[tender.labelKey];
+  if (!method) {
+    // No key, or one we don't know: fall back to reading the label.
+    const lower = label.toLowerCase();
+    if (lower.includes("transfer")) method = "ETRANSFER";
+    else if (lower.includes("cheque") || lower.includes("check")) method = "CHEQUE";
+    else if (lower.includes("debit")) method = "DEBIT_CARD";
+    else if (lower.includes("credit")) method = "CREDIT_CARD";
+    else if (lower.includes("cash")) method = "CASH";
+    // A card transaction settles it even when the tender is something vague
+    // like "External Payment".
+    else method = card ? "CREDIT_CARD" : "OTHER";
+  }
+
+  const parts = [];
+  if (card?.cardType) parts.push(String(card.cardType).replace(/_/g, " ").toLowerCase());
+  if (card?.last4) parts.push(`····${card.last4}`);
+  if (card?.entryType) {
+    const entry = ENTRY_TYPES[card.entryType];
+    if (entry) parts.push(entry);
+  }
+
+  // Card details when there are any. Otherwise the tender's own name, but only
+  // where the method didn't already say it — "Cash · Cash" helps nobody. A
+  // tender we couldn't place is exactly where the label still earns its keep.
+  const details = parts.length
+    ? parts.join(" ").replace(/^./, (c) => c.toUpperCase())
+    : method === "OTHER"
+      ? label || null
+      : null;
+
+  return { method, details };
+}
+
 /** Clover's unitQty is fixed-point, scaled by 1000 (1000 = qty 1). */
 const qtyOf = (li) => {
   const n = Math.round((li.unitQty ?? 1000) / 1000);
@@ -199,8 +272,13 @@ async function importOrder({ prisma, store, order }) {
   const taxCents = Math.max(0, totalCents - subtotalCents);
 
   const pays = payments.length
-    ? payments.map((p) => ({ amountCents: Math.round(p.amount ?? 0), method: "CARD", reference: p.id || null }))
-    : [{ amountCents: totalCents, method: "CARD", reference: null }];
+    ? payments.map((p) => ({
+        amountCents: Math.round(p.amount ?? 0),
+        ...methodOf(p),
+        reference: p.id || null,
+      }))
+    : // No payment rows on a paid order: the money arrived, we just can't say how.
+      [{ amountCents: totalCents, method: "OTHER", details: null, reference: null }];
 
   const sale = await prisma.$transaction(async (tx) => {
     const created = await tx.sale.create({
@@ -251,4 +329,4 @@ async function importOrder({ prisma, store, order }) {
   };
 }
 
-module.exports = { importOrder, refundSale, refundState, matchUnit, qtyOf };
+module.exports = { importOrder, refundSale, refundState, matchUnit, qtyOf, methodOf };

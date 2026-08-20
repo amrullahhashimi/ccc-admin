@@ -62,6 +62,42 @@ export default function RegisterSalesCard() {
     setBusy(false);
   }
 
+  /**
+   * Re-read how already-imported sales were paid.
+   *
+   * Kept apart from Sync now because it rewrites records that already exist
+   * rather than fetching new ones — that should be something asked for, not a
+   * side effect of checking for sales.
+   */
+  async function repairPayments() {
+    setBusy(true);
+    try {
+      const r = await merchant.repairPayments();
+      refresh();
+
+      if (r.corrected) {
+        notify.success(`Corrected ${r.corrected} payment${r.corrected === 1 ? "" : "s"}`, {
+          message: `Checked ${r.checked} of ${r.found} imported payments against Clover.`,
+        });
+      } else {
+        notify.info("Nothing to correct", {
+          message: `All ${r.checked} imported payments already match Clover.`,
+        });
+      }
+
+      if (r.missing.length) {
+        notify.warning(`${r.missing.length} could not be found on Clover`, {
+          message: "Older than the payments Clover still lists, or removed there.",
+        });
+      }
+    } catch (err) {
+      notify.error("Could not re-read payments", {
+        message: err instanceof Error ? err.message : undefined,
+      });
+    }
+    setBusy(false);
+  }
+
   // Nothing to say until a store has connected an account.
   if (status && !status.connected) return null;
 
@@ -82,14 +118,25 @@ export default function RegisterSalesCard() {
             automatic check missed something.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={syncNow}
-          disabled={busy}
-          className="shrink-0 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
-        >
-          {busy ? "Checking…" : "Sync now"}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={repairPayments}
+            disabled={busy}
+            title="Re-read how imported sales were paid, straight from Clover"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5"
+          >
+            Re-read payment types
+          </button>
+          <button
+            type="button"
+            onClick={syncNow}
+            disabled={busy}
+            className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+          >
+            {busy ? "Checking…" : "Sync now"}
+          </button>
+        </div>
       </div>
 
       {status && (

@@ -4,12 +4,27 @@ import { money, saleRef, sales as salesApi, type Customer, type Sale } from "../
 
 const panelClass = "rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]";
 
+/**
+ * What a payment can be taken as. Credit and debit are separate because the
+ * register tells them apart and the shop reconciles them separately.
+ *
+ * CARD isn't offered for a new payment but still has a label: sales imported
+ * before the two were told apart carry it, and a row with no name reads as a
+ * bug rather than as history.
+ */
 const PAY_METHODS = [
   { value: "CASH", label: "Cash" },
-  { value: "CARD", label: "Card" },
+  { value: "CREDIT_CARD", label: "Credit card" },
+  { value: "DEBIT_CARD", label: "Debit card" },
+  { value: "CHEQUE", label: "Cheque" },
   { value: "ETRANSFER", label: "E-transfer" },
   { value: "OTHER", label: "Other" },
 ];
+
+const LEGACY_METHODS = [{ value: "CARD", label: "Card" }];
+
+const methodLabel = (v: string) =>
+  [...PAY_METHODS, ...LEGACY_METHODS].find((m) => m.value === v)?.label ?? v;
 
 const custName = (c?: Customer | null) => (c ? [c.firstName, c.lastName].filter(Boolean).join(" ").trim() : "—");
 const centsFromDollars = (v: string) => Math.round(parseFloat(v || "0") * 100) || 0;
@@ -132,7 +147,19 @@ export default function SaleDetailPage() {
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
                   {(sale.payments ?? []).map((p) => (
                     <div key={p.id} className="flex items-center justify-between py-2.5 text-sm">
-                      <span className="text-gray-700 dark:text-gray-300">{PAY_METHODS.find((m) => m.value === p.method)?.label ?? p.method}<span className="ml-2 text-xs text-gray-400">{new Date(p.createdAt).toLocaleDateString()}</span></span>
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {methodLabel(p.method)}
+                        {/* The card and how it was presented, when the till
+                            recorded them. */}
+                        {p.details && (
+                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                            {p.details}
+                          </span>
+                        )}
+                        <span className="ml-2 text-xs text-gray-400">
+                          {new Date(p.createdAt).toLocaleDateString()}
+                        </span>
+                      </span>
                       <span className="tabular-nums text-gray-800 dark:text-white/90">{money(p.amountCents)}</span>
                     </div>
                   ))}

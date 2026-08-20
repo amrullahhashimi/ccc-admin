@@ -44,7 +44,7 @@ async function fetchOrders(cfg, since) {
   url.searchParams.set("filter", `modifiedTime>${since}`);
   // refunds is not optional detail: Clover computes paymentState from what
   // you expand, and without it a refunded order still comes back as PAID.
-  url.searchParams.set("expand", "lineItems,payments,refunds");
+  url.searchParams.set("expand", "lineItems,payments.tender,payments.cardTransaction,refunds");
   url.searchParams.set("limit", String(PAGE_SIZE));
   // Oldest first, so a batch is imported in the order the sales happened.
   url.searchParams.set("orderBy", "modifiedTime ASC");

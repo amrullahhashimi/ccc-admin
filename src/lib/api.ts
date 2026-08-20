@@ -124,7 +124,10 @@ export interface Product {
 export interface SalePayment {
   id: string;
   amountCents: number;
-  method: string; // CASH | CARD | ETRANSFER | OTHER
+  /** CASH | CREDIT_CARD | DEBIT_CARD | CHEQUE | ETRANSFER | OTHER, or legacy CARD. */
+  method: string;
+  /** What the till knew beyond the method — "Interac ····9303 contactless". */
+  details?: string | null;
   reference?: string | null;
   createdAt: string;
 }
@@ -719,6 +722,17 @@ export const performance = {
 
 /* ------------------------ register sales (Clover) ------------------------ */
 
+/** The outcome of re-reading imported payments against Clover. */
+export interface CloverPaymentRepair {
+  /** Imported payments carrying a Clover id, so re-readable. */
+  found: number;
+  checked: number;
+  /** How many were actually wrong and have been put right. */
+  corrected: number;
+  /** Clover ids the account's recent payments no longer contain. */
+  missing: string[];
+}
+
 /** Where the automatic register-sale sync has got to. */
 export interface CloverSyncStatus {
   connected: boolean;
@@ -745,6 +759,9 @@ export interface CloverSyncReport {
 export const merchant = {
 
   syncStatus: () => request<CloverSyncStatus>("/api/clover/sync"),
+  /** Re-read how already-imported sales were paid, straight from Clover. */
+  repairPayments: () =>
+    request<CloverPaymentRepair>("/api/clover/payments/repair", { method: "POST" }),
   /** Pull register sales in now, looking back `hours` (default 24, max 168). */
   syncNow: (hours = 24) =>
     request<CloverSyncReport>("/api/clover/sync", { method: "POST", ...body({ hours }) }),
