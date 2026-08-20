@@ -52,7 +52,6 @@ function DenominationRows({
               <span className="text-sm font-semibold text-gray-800 dark:text-white/90">
                 {d.label}
               </span>
-              <span className="ml-2 text-xs text-gray-400">{d.note}</span>
             </div>
 
             <div className="w-28 shrink-0">
