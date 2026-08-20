@@ -67,15 +67,22 @@ const AppHeader: React.FC = () => {
             {/* Cross Icon */}
           </button>
 
+          {/* Below lg this had no size on it at all, so it drew at whatever the
+              uploaded file's own dimensions were — a wide logo filled the
+              screen. Capped at 32px high now, and it prefers the square mark.
+
+              The full logo is the fallback rather than the bundled default
+              icon: a shop that has uploaded its logo but not an icon should see
+              its own branding scaled down, not somebody else's placeholder. */}
           <Link to="/" className="lg:hidden">
             <img
-              className="dark:hidden"
-              src={logo("logoLight")}
+              className="h-8 w-auto dark:hidden"
+              src={store?.iconLight ? logo("iconLight") : logo("logoLight")}
               alt={store?.name ?? "CCC Admin"}
             />
             <img
-              className="hidden dark:block"
-              src={logo("logoDark")}
+              className="hidden h-8 w-auto dark:block"
+              src={store?.iconDark ? logo("iconDark") : logo("logoDark")}
               alt={store?.name ?? "CCC Admin"}
             />
           </Link>
