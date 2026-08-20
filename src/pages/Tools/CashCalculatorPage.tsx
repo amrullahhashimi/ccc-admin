@@ -2,34 +2,20 @@ import { useMemo, useState } from "react";
 import { money } from "../../lib/api";
 import { useNotify } from "../../components/ui/notify";
 
-/**
- * Counting a till the way a bank counts a bag: how many of each denomination,
- * what each line comes to, what the drawer holds.
- *
- * Everything is held in whole cents. A nickel is 5, a hundred-dollar note is
- * 10000, and a line is count × cents — integer arithmetic end to end. Counting
- * money in dollars as decimals is how a long shift's total ends up a cent out
- * with nothing to point at.
- *
- * Nothing is saved. This is a worksheet for the moment the drawer is open, not
- * a record — the takings themselves belong under Performance.
- */
-
-/** Canadian denominations in circulation. The penny was withdrawn in 2013. */
 const COINS = [
-  { cents: 5, label: "5¢", note: "Nickel" },
-  { cents: 10, label: "10¢", note: "Dime" },
-  { cents: 25, label: "25¢", note: "Quarter" },
-  { cents: 100, label: "$1", note: "Loonie" },
-  { cents: 200, label: "$2", note: "Toonie" },
+  { cents: 5, label: "5¢" },
+  { cents: 10, label: "10¢" },
+  { cents: 25, label: "25¢" },
+  { cents: 100, label: "$1" },
+  { cents: 200, label: "$2" },
 ];
 
 const NOTES = [
-  { cents: 500, label: "$5", note: "Blue" },
-  { cents: 1000, label: "$10", note: "Purple" },
-  { cents: 2000, label: "$20", note: "Green" },
-  { cents: 5000, label: "$50", note: "Red" },
-  { cents: 10000, label: "$100", note: "Brown" },
+  { cents: 500, label: "$5" },
+  { cents: 1000, label: "$10" },
+  { cents: 2000, label: "$20" },
+  { cents: 5000, label: "$50" },
+  { cents: 10000, label: "$100" },
 ];
 
 const ALL = [...COINS, ...NOTES];
@@ -145,12 +131,7 @@ export default function CashCalculatorPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Cash calculator</h1>
-        <p className="mt-1 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-          Count the drawer a denomination at a time. Nothing here is saved — it's a worksheet for
-          while the till is open, not a record.
-        </p>
       </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
         <div className={cardClass}>
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800">
@@ -204,7 +185,6 @@ export default function CashCalculatorPage() {
               value={expected}
               onChange={(e) => setExpected(e.target.value)}
             />
-            <p className="mt-1.5 text-xs text-gray-400">Optional — the float plus the day's takings.</p>
           </div>
 
           <button
