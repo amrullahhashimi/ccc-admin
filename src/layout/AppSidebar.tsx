@@ -53,11 +53,8 @@ const navItems: NavItem[] = [
         <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.4-.6-.6-2.4 2.1-2.1z" />
       </svg>
     ),
-}
-];
-
-const toolsItems: NavItem[] = [
-  {
+},
+{
     name: "Cash calculator",
     path: "/tools/cash",
     icon: (
@@ -91,22 +88,6 @@ const toolsItems: NavItem[] = [
       </svg>
     ),
   },
-];
-
-const masterItems: NavItem[] = [
-  {
-    name: "Master",
-    path: "/master",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2 3 7v6c0 5 3.8 8.4 9 9 5.2-.6 9-4 9-9V7z" />
-        <path d="M9 12l2 2 4-4" />
-      </svg>
-    ),
-  },
-];
-
-const storeItems: NavItem[] = [
   {
     name: "Store settings",
     path: "/store",
@@ -132,7 +113,20 @@ const storeItems: NavItem[] = [
   },
 ];
 
-type MenuType = "main" | "tools" | "store";
+const masterItems: NavItem[] = [
+  {
+    name: "Master",
+    path: "/master",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2 3 7v6c0 5 3.8 8.4 9 9 5.2-.6 9-4 9-9V7z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+];
+
+type MenuType = "main";
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
@@ -143,8 +137,9 @@ const AppSidebar: React.FC = () => {
   // The master runs the system rather than a shop, so they get one nav item
   // and none of the per-store screens.
   const master = !!user?.superAdmin;
-  const mainNav = master ? [] : navItems;
-  const storeNav = master ? masterItems : storeItems;
+  // One list, in the order it is read. The master runs the system rather
+  // than a shop, so they get their own item and none of the shop screens.
+  const mainNav = master ? masterItems : navItems;
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type: MenuType;
@@ -160,7 +155,7 @@ const AppSidebar: React.FC = () => {
 
   useEffect(() => {
     let submenuMatched = false;
-    ([["main", navItems], ["tools", toolsItems], ["store", storeItems]] as [MenuType, NavItem[]][]).forEach(
+    ([["main", navItems]] as [MenuType, NavItem[]][]).forEach(
       ([type, items]) => {
         items.forEach((nav, index) => {
           nav.subItems?.forEach((subItem) => {
@@ -387,15 +382,7 @@ const AppSidebar: React.FC = () => {
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
-            <div>
-              {renderMenuItems(mainNav, "main")}
-            </div>
-
-            {/* The groups keep their spacing but not their headings — the items
-                read plainly enough without a label over each pair. */}
-            <div>{renderMenuItems(toolsItems, "tools")}</div>
-
-            <div>{renderMenuItems(storeNav, "store")}</div>
+            <div>{renderMenuItems(mainNav, "main")}</div>
           </div>
         </nav>
       </div>
