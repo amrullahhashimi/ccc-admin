@@ -5,7 +5,6 @@ import {
   BoxCubeIcon,
   ChevronDownIcon,
   GridIcon,
-  HorizontaLDots,
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
@@ -392,48 +391,11 @@ const AppSidebar: React.FC = () => {
               {renderMenuItems(mainNav, "main")}
             </div>
 
-            <div>
-              <h2
-                className={`mb-4 flex text-xs uppercase leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Tools"
-                ) : (
-                  <HorizontaLDots className="size-6" />
-                )}
-              </h2>
-              {renderMenuItems(toolsItems, "tools")}
-            </div>
-              
-              <div>
-              
-                <h2
-              
-                  className={`mb-4 flex text-xs uppercase leading-[20px] text-gray-400 ${
-              
-                    !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-              
-                  }`}
-              
-                >
-              
-                  {isExpanded || isHovered || isMobileOpen ? (
-              
-                    "Store"
-              
-                  ) : (
-              
-                    <HorizontaLDots className="size-6" />
-              
-                  )}
-              
-                </h2>
-              
-                {renderMenuItems(storeNav, "store")}
-              
-              </div>
+            {/* The groups keep their spacing but not their headings — the items
+                read plainly enough without a label over each pair. */}
+            <div>{renderMenuItems(toolsItems, "tools")}</div>
+
+            <div>{renderMenuItems(storeNav, "store")}</div>
           </div>
         </nav>
       </div>
