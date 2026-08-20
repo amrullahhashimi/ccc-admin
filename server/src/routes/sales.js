@@ -4,7 +4,16 @@ const { saleRef } = require("../sale-ref");
 const cloverStore = require("../clover-store");
 const cloverConfig = require("../clover-config");
 
-const METHODS = ["CASH", "CARD", "ETRANSFER", "OTHER"];
+/**
+ * What a payment may be recorded as, matching the options the sale page offers.
+ *
+ * CARD stays accepted but is no longer offered: sales imported before credit
+ * and debit were told apart carry it. An unrecognised method falls back to CASH
+ * below, so anything missing from this list is silently recorded as cash —
+ * which is exactly how adding Credit card to the form without adding it here
+ * would have turned card payments into cash ones.
+ */
+const METHODS = ["CASH", "CREDIT_CARD", "DEBIT_CARD", "CHEQUE", "ETRANSFER", "CARD", "OTHER"];
 const GST_RATE = 0.05;
 
 /**
@@ -48,6 +57,9 @@ module.exports = (prisma, requireRole) => {
         where,
         include: {
           customer: { select: { id: true, firstName: true, lastName: true, phone: true } },
+          // How it was paid, for the list's payment column. A sale can be
+          // settled in more than one way, so this is a list, not a field.
+          payments: { select: { method: true, details: true } },
           _count: { select: { items: true } },
         },
         orderBy: { createdAt: "desc" },

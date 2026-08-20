@@ -24,8 +24,29 @@ export function statusBadge(status: string) {
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${map[status] ?? "bg-gray-100 text-gray-500"}`}>{label}</span>;
 }
 
-const custName = (c?: Sale["customer"]) =>
-  c ? [c.firstName, c.lastName].filter(Boolean).join(" ").trim() : "—";
+const METHOD_LABELS: Record<string, string> = {
+  CASH: "Cash",
+  CREDIT_CARD: "Credit card",
+  DEBIT_CARD: "Debit card",
+  CHEQUE: "Cheque",
+  ETRANSFER: "E-transfer",
+  OTHER: "Other",
+  // Imported before credit and debit were told apart.
+  CARD: "Card",
+};
+
+/**
+ * How a sale was paid, in one line.
+ *
+ * A sale can be settled more than one way — part cash, part card — so the
+ * distinct methods are listed rather than just the first. Repeats are dropped:
+ * two cash payments are still "Cash", not "Cash, Cash".
+ */
+const paymentSummary = (payments?: Sale["payments"]) => {
+  const methods = [...new Set((payments ?? []).map((p) => p.method))];
+  if (!methods.length) return "—";
+  return methods.map((m) => METHOD_LABELS[m] ?? m).join(", ");
+};
 
 export default function SalesPage() {
   const navigate = useNavigate();
@@ -81,7 +102,7 @@ export default function SalesPage() {
               <thead className="border-b border-gray-200 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:border-gray-800">
                 <tr>
                   <th className="px-5 py-3">Sale #</th>
-                  <th className="px-5 py-3">Customer</th>
+                  <th className="px-5 py-3">Payment</th>
                   <th className="px-5 py-3 text-right">Items</th>
                   <th className="px-5 py-3 text-right">Total</th>
                   <th className="px-5 py-3">Status</th>
@@ -92,7 +113,9 @@ export default function SalesPage() {
                 {rows.map((s) => (
                   <tr key={s.id} onClick={() => navigate(`/sales/${s.id}`)} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-white/[0.02]">
                     <td className="px-5 py-3 text-sm font-semibold tabular-nums text-gray-800 dark:text-white/90">{saleRef(s)}</td>
-                    <td className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">{custName(s.customer)}</td>
+                    <td className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      {paymentSummary(s.payments)}
+                    </td>
                     <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-600 dark:text-gray-400">{s._count?.items ?? "—"}</td>
                     <td className="px-5 py-3 text-right text-sm tabular-nums text-gray-800 dark:text-white/90">{money(s.totalCents)}</td>
                     <td className="px-5 py-3">

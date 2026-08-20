@@ -117,6 +117,8 @@ export interface Product {
   quantity: number;      // sum of stock entries
   avgCostCents: number;
   serialsOnFile: number; // serials recorded, tracked separately
+  /** Where the in-stock serials are, by name. Empty when none are on a shelf. */
+  locations?: string[];
   unitCount: number;
   tracksSerials: boolean;
 }

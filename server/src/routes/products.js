@@ -119,8 +119,25 @@ module.exports = (prisma, requireRole) => {
     const quantity = (p.stockEntries ?? []).reduce((sum, e) => sum + e.quantity, 0);
     const avgCostCents = totalQty > 0 ? Math.round(totalCost / totalQty) : p.costCents;
 
-    const serialsOnFile = p.units?.filter((u) => u.status === "IN_STOCK").length ?? 0;
-    return { ...p, quantity, avgCostCents, serialsOnFile, unitCount: p.units?.length ?? 0 };
+    const inStock = p.units?.filter((u) => u.status === "IN_STOCK") ?? [];
+    const serialsOnFile = inStock.length;
+
+    // Where this product can actually be picked up: the distinct locations of
+    // the serials still on the shelf. Sold ones say nothing about where to go
+    // and find it. Named rather than sent as ids, since that is what the list
+    // shows and nothing downstream filters on them.
+    const locations = [
+      ...new Set(inStock.map((u) => u.location?.name).filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b));
+
+    return {
+      ...p,
+      quantity,
+      avgCostCents,
+      serialsOnFile,
+      locations,
+      unitCount: p.units?.length ?? 0,
+    };
   };
 
   router.get("/", async (req, res) => {
@@ -159,7 +176,13 @@ module.exports = (prisma, requireRole) => {
           brand: true,
           category: { include: { parent: { select: { name: true } } } },
           vendor: { select: { id: true, name: true } },
-          units: { select: { id: true, status: true } },
+          units: {
+            select: {
+              id: true,
+              status: true,
+              location: { select: { name: true } },
+            },
+          },
           stockEntries: { select: { quantity: true, costCents: true } },
         },
         orderBy: { createdAt: "desc" },

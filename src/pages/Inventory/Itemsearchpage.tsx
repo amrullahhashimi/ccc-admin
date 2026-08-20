@@ -138,7 +138,7 @@ export default function ItemSearchPage() {
                   <th className="px-4 py-3 text-right">Sale</th>
                   <th className="px-4 py-3">Brand</th>
                   <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Vendor</th>
+                  <th className="px-4 py-3">Location</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -179,8 +179,12 @@ export default function ItemSearchPage() {
                       <td className="whitespace-nowrap px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400">
                         {categoryLabel}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400">
-                        {p.vendor?.name ?? "—"}
+                      {/* Every shelf this product still sits on. One name when
+                          the serials are all in one place, both when they are
+                          split — which is the question being asked of this
+                          column: where do I go and find it. */}
+                      <td className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400">
+                        {p.locations?.length ? p.locations.join(", ") : "—"}
                       </td>
                     </tr>
                   );
