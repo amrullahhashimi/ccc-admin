@@ -6,7 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNotify } from "../../components/ui/notify";
 import { Chip, Empty, Loading, Pager, Panel } from "./parts";
 import { SourceMessage } from "./CatalogProductDetail";
-import { dateTime, inputClass } from "./ui";
+import { controlClass, dateTime } from "./ui";
 
 /**
  * Every message that has been imported, and the words it contained.
@@ -82,7 +82,7 @@ export default function ImportHistoryPage() {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <select
-          className={`${inputClass} w-auto min-w-0`}
+          className={`${controlClass} w-56 shrink-0`}
           value={vendorId}
           onChange={(e) => {
             setVendorId(e.target.value);

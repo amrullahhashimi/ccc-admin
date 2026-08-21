@@ -5,6 +5,17 @@
  * importing a class name doesn't cost a component file its fast refresh.
  */
 
+/**
+ * A control, without a width.
+ *
+ * Width belongs to whoever places the control. Baking `w-full` in and undoing
+ * it with `w-auto` later is a coin toss — both are width utilities, and the
+ * winner depends on the order Tailwind emits them rather than the order they
+ * are written.
+ */
+export const controlClass =
+  "h-11 rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800";
+
 export const inputClass =
   "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:focus:border-brand-800";
 

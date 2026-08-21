@@ -2,8 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { service as serviceApi, SERVICE_STATUSES, money, type Service } from "../../lib/api";
 
-const inputClass =
-  "h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
+/**
+ * Everything a control looks like *except* how wide it is.
+ *
+ * Width is left to whoever places it. Baking `w-full` in and trying to undo it
+ * with `w-auto` later doesn't work — both are width utilities, and which one
+ * wins depends on the order Tailwind emits them, not the order they're written.
+ * That is how the status dropdown ended up filling the row and squeezing the
+ * search box down to a square.
+ */
+const controlClass =
+  "h-11 rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800";
 
 const statusLabel = (v: string) => SERVICE_STATUSES.find((s) => s.value === v)?.label ?? v;
 
@@ -52,21 +61,37 @@ export default function ServicePage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{rows.length} {rows.length === 1 ? "order" : "orders"}</p>
-        <button onClick={() => navigate("/service/new")} className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
-          New service
-        </button>
-      </div>
-
-      {/* Search and status filter share one line. Both can shrink, so the row
-          always fits the page width — no sideways scroll. */}
+      {/* The count, the search, the filter and the action on one line. The
+          search holds a quarter of the width; the filter and the action sit
+          against the right edge. */}
       <div className="flex items-center gap-3">
-        <input className={`${inputClass} min-w-0 flex-1`} value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className={`${inputClass} w-auto min-w-0`} value={status} onChange={(e) => setStatus(e.target.value)}>
+        <p className="shrink-0 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+          {rows.length} {rows.length === 1 ? "order" : "orders"}
+        </p>
+        <input
+          className={`${controlClass} min-w-0 basis-1/4`}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Search service orders"
+        />
+        {/* Takes the slack the search no longer wants, so the filter and the
+            action stay on the right edge instead of drifting inwards. */}
+        <span className="flex-1" />
+        <select
+          className={`${controlClass} w-44 shrink-0`}
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          aria-label="Status"
+        >
           <option value="">All statuses</option>
           {SERVICE_STATUSES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}
         </select>
+        <button
+          onClick={() => navigate("/service/new")}
+          className="shrink-0 whitespace-nowrap rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600"
+        >
+          New service
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
