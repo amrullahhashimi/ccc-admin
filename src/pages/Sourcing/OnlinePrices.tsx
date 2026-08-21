@@ -112,10 +112,7 @@ export default function OnlinePrices({ productId, productName }: { productId: st
           {/* ----------------------- the ones that must be opened ----------------------- */}
           {data && data.links.length > 0 && (
             <div className="border-t border-gray-200 px-5 py-4 dark:border-gray-800">
-              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Search these yourself</p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                These sites block automated lookups, so no price is shown rather than a guessed one.
-              </p>
+              <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Other Resources</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {data.links.map((link) => (
                   <a
