@@ -10,7 +10,8 @@
     "seed": "node prisma/seed.js",
     "studio": "prisma studio",
     "postinstall": "prisma generate",
-    "migrate:deploy": "prisma migrate deploy"
+    "migrate:deploy": "prisma migrate deploy",
+    "test": "node --test \"test/**/*.test.js\""
   },
   "engines": {
     "node": ">=18"

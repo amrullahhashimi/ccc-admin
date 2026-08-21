@@ -1015,3 +1015,366 @@ export const service = {
   updateLine: (lineId: string, data: Record<string, unknown>) => request<ServiceLine>(`/api/service/lines/${lineId}`, { method: "PATCH", ...body(data) }),
   removeLine: (lineId: string) => request<{ ok: true }>(`/api/service/lines/${lineId}`, { method: "DELETE" }),
 };
+/* --------------------------- vendor sourcing --------------------------- */
+/**
+ * Vendor price lists: what each supplier is asking for a product today, and
+ * which of them is cheapest at the quantity you actually intend to buy.
+ *
+ * Separate from `products` above — that is stock the shop owns, this is a
+ * catalogue of things vendors are offering.
+ */
+
+/** The colour a comparison cell gets: one vendor lowest, or several tied. */
+export type PriceTone = "cheapest" | "tied" | "higher";
+
+export interface CatalogAttributes {
+  brand?: string | null;
+  model?: string | null;
+  generation?: string | null;
+  productType?: string | null;
+  storage?: string | null;
+  ram?: string | null;
+  connectivity?: string | null;
+  carrier?: string | null;
+  condition?: string | null;
+  grade?: string | null;
+  color?: string | null;
+  cpu?: string | null;
+  screenSize?: string | null;
+}
+
+export interface CatalogRow extends CatalogAttributes {
+  id: string;
+  normalizedName: string;
+  updatedAt: string;
+  offerCount: number;
+  vendorCount: number;
+  lowestCents: number | null;
+  currency: string;
+  bestVendor: { id: string; name: string | null } | null;
+  savingsCents: number | null;
+  tied: boolean;
+  quantityBreak: boolean;
+}
+
+export interface ComparisonCell {
+  vendorId: string;
+  vendorName: string | null;
+  offerId: string | null;
+  priceCents: number;
+  currency: string;
+  minQuantity: number;
+  maxQuantity: number | null;
+  /** What the vendor said they hold, when their list says so. */
+  availableQuantity: number | null;
+  condition: string | null;
+  grade: string | null;
+  quantityBreak: boolean;
+  sourceMessageId: string | null;
+  tone: PriceTone;
+}
+
+export interface ComparisonRow extends CatalogRow {
+  cells: ComparisonCell[];
+}
+
+export interface SourcingOffer {
+  id: string;
+  vendor: { id: string; name: string; active?: boolean };
+  priceCents: number;
+  currency: string;
+  minQuantity: number;
+  maxQuantity: number | null;
+  availableQuantity: number | null;
+  condition: string | null;
+  grade: string | null;
+  note: string | null;
+  active: boolean;
+  lastSeenAt: string;
+  sourceMessageId: string | null;
+  sourceReceivedAt: string | null;
+}
+
+/** A listing found on somebody else's website. */
+export interface OnlinePrice {
+  id: string;
+  source: string;
+  sourceLabel: string;
+  /** "retail" for national chains, "local" for the classified market. */
+  tier: "retail" | "local";
+  title: string;
+  url: string;
+  priceCents: number;
+  currency: string;
+  location: string | null;
+  inStock: boolean | null;
+}
+
+export interface OnlineLookup {
+  query: string;
+  checkedAt: string | null;
+  results: OnlinePrice[];
+  /** Sites that block automated reads — a search link instead of a price. */
+  links: { source: string; label: string; tier: "retail" | "local"; url: string }[];
+  failures: { source: string; label: string; reason: string }[];
+  /** Cheapest online against the best single-unit wholesale price. */
+  margin: {
+    vendor: { id: string; name: string } | null;
+    vendorPriceCents: number;
+    retailPriceCents: number;
+    marginCents: number;
+    localPriceCents: number | null;
+  } | null;
+}
+
+export interface PriceChange {
+  id: string;
+  changedAt: string;
+  oldPriceCents: number;
+  newPriceCents: number;
+  minQuantity: number;
+  vendor: { id: string; name: string } | null;
+  product?: { id: string; normalizedName: string } | null;
+  changedBy?: string | null;
+}
+
+/** One line the parser read, before anybody has agreed to save it. */
+export interface ParsedItem extends CatalogAttributes {
+  index: number;
+  raw: string;
+  lineNumber: number | null;
+  matchKey: string;
+  /** Brand and model only — storage, condition and grade have their own columns. */
+  productName: string;
+  /** The full descriptor the catalogue row will be named. */
+  proposedName: string;
+  priceCents: number | null;
+  currency: string;
+  minQuantity: number;
+  maxQuantity: number | null;
+  availableQuantity: number | null;
+  parseConfidence: number | null;
+  warnings: string[];
+  source: "rules" | "ai";
+  /** accept = signatures identical, review = plausible, new = propose a product. */
+  decision: "accept" | "review" | "new";
+  /** Attached to a strong match that a person should tick before saving. */
+  needsConfirmation?: boolean;
+  catalogProductId: string | null;
+  match: {
+    id: string;
+    name: string;
+    score: number;
+    label: string;
+    conflicts: string[];
+    unknowns: string[];
+  } | null;
+  alternatives: { id: string; name: string; score: number; label: string; conflicts: string[] }[];
+  existingOffer: { id: string; priceCents: number; changed: boolean } | null;
+}
+
+export interface ParseResult {
+  vendor: { id: string; name: string; currency: string };
+  readBy: "rules" | "ai";
+  aiAvailable: boolean;
+  lineCount: number;
+  items: ParsedItem[];
+  skipped: { lineNumber: number; raw: string; reason: string }[];
+}
+
+export interface SourcingVendor {
+  id: string;
+  name: string;
+  currency: string;
+  active: boolean;
+  contactPerson: string | null;
+  phone: string | null;
+  email1: string | null;
+  offerCount: number;
+  productCount: number;
+  messageCount: number;
+  lastMessageAt: string | null;
+  lastMessageId: string | null;
+}
+
+export interface SourcingOptions {
+  vendors: { id: string; name: string; currency: string }[];
+  brands: string[];
+  productTypes: string[];
+  storages: string[];
+  conditions: string[];
+  grades: string[];
+  aiEnabled: boolean;
+}
+
+export interface SourcingDashboard {
+  quantity: number;
+  totals: { vendors: number; products: number; offers: number; messages: number; multiVendorProducts: number };
+  bestDeals: CatalogRow[];
+  recentMessages: { id: string; vendor: { id: string; name: string }; itemCount: number; status: string; receivedAt: string }[];
+  recentChanges: PriceChange[];
+}
+
+export interface VendorMessageRow {
+  id: string;
+  /** What the importer called it. Null falls back to vendor and date. */
+  name: string | null;
+  vendor: { id: string; name: string };
+  status: string;
+  itemCount: number;
+  offerCount: number;
+  importedBy: string | null;
+  receivedAt: string;
+}
+
+export interface VendorMessageDetail {
+  id: string;
+  name: string | null;
+  vendor: { id: string; name: string };
+  rawMessage: string;
+  status: string;
+  itemCount: number;
+  receivedAt: string;
+  importedBy: string | null;
+  offers: {
+    id: string;
+    product: { id: string; normalizedName: string };
+    priceCents: number;
+    currency: string;
+    minQuantity: number;
+    maxQuantity: number | null;
+  }[];
+}
+
+/** Filters shared by the catalogue, the comparison and both exports. */
+export interface SourcingFilters {
+  q?: string;
+  brand?: string;
+  productType?: string;
+  storage?: string;
+  condition?: string;
+  grade?: string;
+  vendorId?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  availability?: string;
+  /** Only the products these imports brought in, comma separated. */
+  messageIds?: string;
+  /** Only products more than one vendor quotes — the ones worth comparing. */
+  multiVendor?: string;
+  sort?: string;
+  quantity?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+const sourcingQuery = (filters: SourcingFilters = {}) => {
+  const p = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    p.set(key, String(value));
+  });
+  const qs = p.toString();
+  return qs ? `?${qs}` : "";
+};
+
+export const sourcing = {
+  options: () => request<SourcingOptions>("/api/sourcing/options"),
+  dashboard: (quantity = 1) => request<SourcingDashboard>(`/api/sourcing/dashboard?quantity=${quantity}`),
+  vendors: (q?: string) =>
+    request<SourcingVendor[]>("/api/sourcing/vendors" + (q ? `?q=${encodeURIComponent(q)}` : "")),
+
+  parse: (data: { vendorId: string; message: string; useAi?: boolean }) =>
+    request<ParseResult>("/api/sourcing/parse", { method: "POST", ...body(data) }),
+  import: (data: { vendorId: string; name?: string; rawMessage: string; items: Record<string, unknown>[] }) =>
+    request<{
+      messageId: string;
+      name: string | null;
+      created: number;
+      updated: number;
+      newProducts: number;
+      priceChanges: { product: string; oldPriceCents: number; newPriceCents: number }[];
+    }>("/api/sourcing/import", { method: "POST", ...body(data) }),
+
+  products: (filters: SourcingFilters = {}) =>
+    request<{ quantity: number; page: number; pageSize: number; total: number; rows: CatalogRow[] }>(
+      "/api/sourcing/products" + sourcingQuery(filters)
+    ),
+  product: (id: string, quantity = 1) =>
+    request<{
+      product: CatalogRow & { specifications?: Record<string, unknown> | null; matchKey: string; createdAt: string };
+      offers: SourcingOffer[];
+      comparison: {
+        quantity: number;
+        vendors: ComparisonCell[];
+        cheapestCents: number | null;
+        savingsCents: number | null;
+        tied: boolean;
+      };
+      history: PriceChange[];
+    }>(`/api/sourcing/products/${id}?quantity=${quantity}`),
+  updateProduct: (id: string, data: Record<string, unknown>) =>
+    request<CatalogRow>(`/api/sourcing/products/${id}`, { method: "PATCH", ...body(data) }),
+  removeProduct: (id: string) => request<{ ok: true }>(`/api/sourcing/products/${id}`, { method: "DELETE" }),
+
+  /** Cached unless `refresh`, which asks the sites again. */
+  online: (id: string, refresh = false) =>
+    request<OnlineLookup>(`/api/sourcing/products/${id}/online${refresh ? "?refresh=1" : ""}`),
+
+  updateOffer: (id: string, data: Record<string, unknown>) =>
+    request<SourcingOffer>(`/api/sourcing/offers/${id}`, { method: "PATCH", ...body(data) }),
+  removeOffer: (id: string) => request<{ ok: true }>(`/api/sourcing/offers/${id}`, { method: "DELETE" }),
+
+  comparison: (filters: SourcingFilters = {}) =>
+    request<{
+      quantity: number;
+      page: number;
+      pageSize: number;
+      total: number;
+      vendors: { id: string; name: string }[];
+      rows: ComparisonRow[];
+    }>("/api/sourcing/comparison" + sourcingQuery(filters)),
+
+  messages: (filters: { q?: string; vendorId?: string; page?: number; pageSize?: number } = {}) =>
+    request<{ page: number; pageSize: number; total: number; rows: VendorMessageRow[] }>(
+      "/api/sourcing/messages" + sourcingQuery(filters)
+    ),
+  message: (id: string) => request<VendorMessageDetail>(`/api/sourcing/messages/${id}`),
+  /** Undoes an import: the message, the offers it brought in, and any product left empty. */
+  removeMessage: (id: string) =>
+    request<{ ok: true; offersRemoved: number; productsRemoved: number }>(`/api/sourcing/messages/${id}`, {
+      method: "DELETE",
+    }),
+
+  priceHistory: (filters: { productId?: string; vendorId?: string; limit?: number } = {}) =>
+    request<PriceChange[]>("/api/sourcing/price-history" + sourcingQuery(filters)),
+
+  /** The export endpoints answer with a file rather than JSON. */
+  exportUrl: (what: "offers" | "comparison", filters: SourcingFilters = {}) =>
+    `/api/sourcing/export/${what}${sourcingQuery(filters)}`,
+};
+
+/**
+ * Vendor prices carry their own currency, unlike the shop's own money — a CAD
+ * shop can and does buy from an American supplier.
+ */
+export const vendorMoney = (cents?: number | null, currency = "CAD") =>
+  cents == null ? "—" : `$${(cents / 100).toFixed(2)} ${currency}`;
+
+/** Pulls a CSV export down as a file, with the session cookie attached. */
+export async function downloadCsv(url: string, filename: string) {
+  const res = await fetch(url, { credentials: "same-origin" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new ApiError((data as { error?: string }).error || "That export could not be built.", res.status);
+  }
+  const blob = await res.blob();
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(href);
+}

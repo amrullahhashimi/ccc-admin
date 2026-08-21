@@ -23,6 +23,12 @@ const LABEL: Record<string, string> = {
   master: "Stores",
   settings: "Settings",
   new: "New",
+  sourcing: "Vendor pricing",
+  import: "Import message",
+  comparison: "Price comparison",
+  overview: "Overview",
+  history: "Import history",
+  products: "Products",
 };
 
 /* Only these are real destinations. A segment that isn't one — "items" in
@@ -49,12 +55,19 @@ const ROUTES = new Set([
   "/store/sharing",
   "/master",
   "/settings",
+  "/sourcing",
+  "/sourcing/overview",
+  "/sourcing/import",
+  "/sourcing/comparison",
+  "/sourcing/history",
 ]);
 
 /* A crumb that isn't a page of its own but has an obvious home: "Items", in
    /inventory/items/123, belongs to the item search. */
 const ALIAS: Record<string, string> = {
   "/inventory/items": "/inventory/search",
+  // A sourcing product belongs to the comparison it was reached from.
+  "/sourcing/products": "/sourcing/comparison",
 };
 
 const linkClass = "text-gray-500 hover:text-brand-500 dark:text-gray-400";

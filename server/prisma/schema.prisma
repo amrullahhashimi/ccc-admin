@@ -63,6 +63,11 @@ model Store {
   layaways   Layaway[]
   invoices   Invoice[]
   performance PerformanceEntry[]
+  catalogProducts CatalogProduct[]
+  onlinePrices    OnlinePrice[]
+  vendorMessages  VendorMessage[]
+  vendorOffers    VendorOffer[]
+  offerHistory    OfferPriceHistory[]
 
   sharesGranted  StoreShare[] @relation("SharingStore")
   sharesReceived StoreShare[] @relation("ViewingStore")
@@ -117,6 +122,8 @@ model User {
 
   sales           Sale[]
   ticketsAssigned Ticket[] @relation("Technician")
+  vendorMessages  VendorMessage[]
+  offerChanges    OfferPriceHistory[]
 
   @@index([storeId])
   performance PerformanceEntry[]
@@ -198,6 +205,8 @@ model Vendor {
   products Product[]
   stockEntries StockEntry[]
   units ProductUnit[]
+  messages VendorMessage[]
+  offers   VendorOffer[]
 
   @@unique([storeId, name])
   @@index([storeId])
@@ -591,4 +600,216 @@ model Invoice {
 
   @@unique([storeId, number])
   @@index([storeId])
+}
+
+/* --------------------------- vendor sourcing --------------------------- */
+//
+// What a vendor is *offering*, as opposed to what the shop owns. The two are
+// deliberately separate trees:
+//
+//   Product / ProductUnit  — stock on the shelf, with a SKU, a cost and serials
+//   CatalogProduct / VendorOffer — a thing a vendor sells, and what they want
+//                                  for it today
+//
+// Folding them together would mean inventing a SKU and a stock record for every
+// line of every price list, most of which the shop will never buy.
+
+/// One real-world product, written the same way no matter which vendor is
+/// describing it. Vendors write "iPad 8", "IPAD 8 WIFI", "Apple iPad 8th Gen";
+/// all three land here once, and every vendor's price hangs off it.
+///
+/// `matchKey` is the deterministic signature of the significant attributes
+/// (see sourcing/normalize.js). Two rows with the same key ARE the same
+/// product; two rows with different keys are never merged automatically, which
+/// is what keeps "iPad 8 WiFi 32GB" apart from "iPad 8 WiFi+Cellular 32GB".
+model CatalogProduct {
+  id String @id @default(cuid())
+
+  brand       String?
+  model       String?
+  generation  String?
+  productType String? // Phone | Tablet | Laptop | Watch | Accessory | Other
+
+  /// How the product is shown everywhere in the UI.
+  normalizedName String
+
+  /// The significant attributes, joined. Unique within a store.
+  matchKey String
+
+  storage      String?
+  ram          String?
+  connectivity String? // WiFi | WiFi + Cellular | LTE | 5G
+  carrier      String?
+  condition    String? // New | Open box | Used | For parts
+  grade        String? // A | B | C ...
+  color        String?
+  cpu          String?
+  screenSize   String?
+
+  /// Anything the parser recognised but has no column for.
+  specifications Json?
+
+  /// Last time the online retail lookup ran for this product. Null means never.
+  onlineCheckedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  offers       VendorOffer[]
+  onlinePrices OnlinePrice[]
+
+  @@unique([storeId, matchKey])
+  @@index([storeId, brand])
+  @@index([storeId, normalizedName])
+}
+
+/// The raw text a vendor sent, kept forever so any offer can be traced back to
+/// the words it came from.
+model VendorMessage {
+  id String @id @default(cuid())
+
+  rawMessage String @db.LongText
+  status     String @default("IMPORTED") // PARSED | IMPORTED | DISCARDED
+
+  /// What the person importing called this batch — "Digital Junction Aug 21",
+  /// "morning list". How an import is found again later, so null falls back to
+  /// the vendor and the date.
+  name String?
+
+  /// How many offers this message produced.
+  itemCount Int @default(0)
+
+  receivedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  importedById String?
+  importedBy   User?   @relation(fields: [importedById], references: [id])
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  offers VendorOffer[]
+
+  @@index([storeId, receivedAt])
+  @@index([vendorId])
+}
+
+/// What one vendor charges for one product at one quantity break.
+///
+/// A vendor can have several rows for the same product — 1-4 at $130, 5-9 at
+/// $125, 10+ at $119.99. `minQuantity` is what identifies a tier, so re-sending
+/// the same tier updates the price (and writes history) instead of piling up
+/// duplicates.
+model VendorOffer {
+  id String @id @default(cuid())
+
+  priceCents Int
+  currency   String @default("CAD")
+
+  minQuantity Int  @default(1)
+  /// Null means "and up" — no ceiling.
+  maxQuantity Int?
+
+  /// How many the vendor said they had, when their list says so. Not the same
+  /// thing as minQuantity at all: a "Live List" column of 4 means they hold
+  /// four, not that you must take four. Null means they didn't say.
+  availableQuantity Int?
+
+  /// Condition and grade as this vendor stated them for this offer. They can
+  /// be narrower than the product's own (a vendor quoting Grade B stock of a
+  /// product recorded without a grade).
+  condition String?
+  grade     String?
+
+  note String? @db.Text
+
+  /// Cleared when a vendor stops listing it, rather than deleted, so history
+  /// and the source message survive.
+  active Boolean @default(true)
+
+  /// Last time a vendor message repeated this offer.
+  lastSeenAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  catalogProductId String
+  catalogProduct   CatalogProduct @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+
+  sourceMessageId String?
+  sourceMessage   VendorMessage? @relation(fields: [sourceMessageId], references: [id])
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  history OfferPriceHistory[]
+
+  @@unique([vendorId, catalogProductId, minQuantity])
+  @@index([storeId, catalogProductId])
+  @@index([storeId, vendorId])
+}
+
+/// What a product sells for online, as found by the lookup in sourcing/online.
+///
+/// Cached rather than fetched on every page view: these come from other
+/// people's websites, and asking them for the same product all day would be
+/// both slow and rude. Rows are replaced wholesale each time the lookup runs.
+model OnlinePrice {
+  id String @id @default(cuid())
+
+  /// Which site it came from — see PROVIDERS in sourcing/online/providers.js.
+  source      String
+  sourceLabel String
+  /// "retail" for national chains, "local" for the classified market.
+  tier        String
+
+  title      String  @db.Text
+  url        String  @db.Text
+  priceCents Int
+  currency   String  @default("CAD")
+
+  /// The town a local listing is in, when the source says.
+  location String?
+  inStock  Boolean?
+
+  checkedAt DateTime @default(now())
+
+  catalogProductId String
+  catalogProduct   CatalogProduct @relation(fields: [catalogProductId], references: [id], onDelete: Cascade)
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, catalogProductId])
+}
+
+/// Every price change an offer has been through.
+model OfferPriceHistory {
+  id String @id @default(cuid())
+
+  oldPriceCents Int
+  newPriceCents Int
+  changedAt     DateTime @default(now())
+
+  vendorOfferId String
+  vendorOffer   VendorOffer @relation(fields: [vendorOfferId], references: [id], onDelete: Cascade)
+
+  changedById String?
+  changedBy   User?   @relation(fields: [changedById], references: [id])
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, changedAt])
+  @@index([vendorOfferId])
 }

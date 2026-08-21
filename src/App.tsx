@@ -34,6 +34,12 @@ import CashCalculatorPage from "./pages/Tools/CashCalculatorPage";
 import StoreSettingsPage from "./pages/Store/StoreSettingsPage";
 import SharingPage from "./pages/Store/SharingPage";
 import MasterPage from "./pages/Master/MasterPage";
+import SourcingHub from "./pages/Sourcing/SourcingHub";
+import SourcingHome from "./pages/Sourcing/SourcingHome";
+import ImportMessagePage from "./pages/Sourcing/ImportMessagePage";
+import ComparisonPage from "./pages/Sourcing/ComparisonPage";
+import CatalogProductDetail from "./pages/Sourcing/CatalogProductDetail";
+import ImportHistoryPage from "./pages/Sourcing/ImportHistoryPage";
 
 
 /**
@@ -98,6 +104,16 @@ export default function App() {
             <Route path="/store" element={<StoreSettingsPage />} />
             <Route path="/store/sharing" element={<SharingPage />} />
             <Route path="/master" element={<MasterPage />} />
+
+            {/* Vendor pricing — what suppliers are asking, and who is cheapest */}
+            <Route path="/sourcing" element={<SourcingHub />} />
+            <Route path="/sourcing/overview" element={<SourcingHome />} />
+            <Route path="/sourcing/import" element={<ImportMessagePage />} />
+            <Route path="/sourcing/comparison" element={<ComparisonPage />} />
+            {/* A product still has its own page — the comparison links to it —
+                but there is no separate catalogue or vendor list to keep. */}
+            <Route path="/sourcing/products/:id" element={<CatalogProductDetail />} />
+            <Route path="/sourcing/history" element={<ImportHistoryPage />} />
 
           </Route>
 

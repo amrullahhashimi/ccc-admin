@@ -54,6 +54,20 @@ const navItems: NavItem[] = [
       </svg>
     ),
 },
+  {
+    // Vendor price lists. One item, like Inventory: the jobs inside it are
+    // tiles on its own page rather than a menu that unfolds in the sidebar.
+    name: "Vendor pricing",
+    path: "/sourcing",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 6h13" />
+        <path d="M3 12h9" />
+        <path d="M3 18h11" />
+        <path d="m18 9 3 3-3 3" />
+      </svg>
+    ),
+  },
 {
     name: "Cash calculator",
     path: "/tools/cash",
