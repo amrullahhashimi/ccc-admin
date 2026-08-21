@@ -42,6 +42,18 @@ async function get(url, { json = false } = {}) {
   return json ? res.json() : res.text();
 }
 
+/** The handful of entities that turn up in retail titles. */
+const ENTITIES = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " ", "#39": "'", "#x27": "'" };
+
+const decode = (text) =>
+  String(text ?? "").replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (whole, code) => {
+    const key = code.toLowerCase();
+    if (ENTITIES[key]) return ENTITIES[key];
+    if (/^#\d+$/.test(key)) return String.fromCharCode(Number(key.slice(1)));
+    if (/^#x[0-9a-f]+$/.test(key)) return String.fromCharCode(parseInt(key.slice(2), 16));
+    return whole;
+  });
+
 /** Keeps a result only if it is plausible and points where it claims to. */
 function accept(result, domain) {
   const title = String(result.title ?? "").replace(/\s+/g, " ").trim();
@@ -108,6 +120,76 @@ const bestBuy = {
   },
 };
 
+/**
+ * Amazon.ca.
+ *
+ * There is no free product API — the affiliate one needs an approved account —
+ * so this reads the search page the same way a browser would. It is the only
+ * provider here parsed out of markup rather than structured data, so it is
+ * written to fail closed: a result is kept only when its id, its name and its
+ * price all come out cleanly, and a bot check throws rather than quietly
+ * returning nothing, so the screen can say Amazon could not be reached.
+ *
+ * Links are built from the ASIN rather than lifted out of the page, which skips
+ * the tracking parameters and can't be pointed anywhere but Amazon.
+ *
+ * /s and /dp are both permitted by their robots.txt, and a lookup happens at
+ * most once every twelve hours per product.
+ */
+const amazon = {
+  id: "AMAZON_CA",
+  label: "Amazon.ca",
+  tier: "retail",
+  kind: "live",
+  domain: "amazon.ca",
+  searchUrl: (q) => `https://www.amazon.ca/s?k=${encodeURIComponent(q)}`,
+
+  async search(query) {
+    const html = await get(amazon.searchUrl(query));
+
+    // Amazon shows this instead of results when it doesn't like the request.
+    if (/Enter the characters you see|api-services-support@amazon/i.test(html)) {
+      throw new Error("asked to verify a human");
+    }
+
+    const marks = [...html.matchAll(/data-component-type="s-search-result"/g)].map((m) => m.index);
+
+    /* Amazon occasionally answers a perfectly ordinary request with a page that
+       carries no results markup at all — a quiet throttle. That is not the same
+       as "nothing matched", and saying so lets the screen report Amazon as
+       unreachable instead of implying they don't stock it. */
+    if (!marks.length) {
+      if (/No results for|did not match any products/i.test(html)) return [];
+      throw new Error("no results markup — likely throttled");
+    }
+
+    const results = [];
+
+    marks.forEach((start, i) => {
+      const block = html.slice(start, marks[i + 1] ?? start + 60000);
+
+      // The id sits in the enclosing tag, just before the marker.
+      const asin = [...html.slice(Math.max(0, start - 600), start).matchAll(/data-asin="([A-Z0-9]{10})"/g)].pop()?.[1];
+      const title = decode((/<h2[^>]*>([\s\S]*?)<\/h2>/.exec(block)?.[1] ?? "").replace(/<[^>]+>/g, "")).trim();
+      const price = /<span class="a-offscreen">\s*\$?([\d,]+\.\d{2})\s*<\/span>/.exec(block)?.[1];
+
+      if (!asin || !title || !price) return; // half a result is no result
+
+      const accepted = accept(
+        {
+          title,
+          url: `https://www.amazon.ca/dp/${asin}`,
+          priceCents: Math.round(Number(price.replace(/,/g, "")) * 100),
+        },
+        "amazon.ca"
+      );
+      if (accepted) results.push(accepted);
+    });
+
+    return results;
+  },
+};
+
 /* ---------------------------- the local market ---------------------------- */
 
 /**
@@ -163,14 +245,9 @@ const kijiji = {
 
 const linkOnly = [
   {
-    id: "AMAZON_CA",
-    label: "Amazon.ca",
-    tier: "retail",
-    kind: "link",
-    domain: "amazon.ca",
-    searchUrl: (q) => `https://www.amazon.ca/s?k=${encodeURIComponent(q)}`,
-  },
-  {
+    // Walmart answers every automated request with a "Verify Your Identity"
+    // challenge. Getting round that is not something this will do, so the
+    // search opens in a tab like the rest of them.
     id: "WALMART_CA",
     label: "Walmart Canada",
     tier: "retail",
@@ -212,10 +289,10 @@ const linkOnly = [
   },
 ];
 
-const PROVIDERS = [bestBuy, kijiji, ...linkOnly];
+const PROVIDERS = [bestBuy, amazon, kijiji, ...linkOnly];
 
 const live = () => PROVIDERS.filter((p) => p.kind === "live");
 const links = () => PROVIDERS.filter((p) => p.kind === "link");
 const byId = (id) => PROVIDERS.find((p) => p.id === id) ?? null;
 
-module.exports = { PROVIDERS, PER_PROVIDER, accept, byId, links, live };
+module.exports = { PROVIDERS, PER_PROVIDER, accept, byId, decode, links, live };

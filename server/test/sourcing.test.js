@@ -554,3 +554,48 @@ test("but two quotes get the full green and red", () => {
   const result = compareProduct({ id: "p1" }, { A: { offers: [offer("A", 16800)] }, B: { offers: [offer("B", 17500)] } }, 1);
   assert.deepEqual(result.vendors.map((v) => v.tone), ["cheapest", "higher"]);
 });
+
+test("a family qualifier the product doesn't have rules a listing out", () => {
+  // An iPad Mini 6 is $470 and an iPad 6 is $130. Same words, different product.
+  assert.ok(!isRelevant("2021 Apple iPad Mini 6 (Wi-Fi, 64GB) - Purple", { model: "iPad 6", storage: "32GB" }));
+  assert.ok(!isRelevant("Apple iPhone 14 Pro Max 128GB", { model: "iPhone 14", storage: "128GB" }));
+  assert.ok(!isRelevant("Apple iPad Air 2 32GB", { model: "iPad 2", storage: "32GB" }));
+});
+
+test("but the qualifier is welcome when the product asked for it", () => {
+  assert.ok(isRelevant("Apple iPad Mini 6 64GB", { model: "iPad Mini 6", storage: "64GB" }));
+  assert.ok(isRelevant("Apple iPhone 14 Pro Max 256GB", { model: "iPhone 14 Pro Max", storage: "256GB" }));
+});
+
+test("the wrong capacity is the wrong price", () => {
+  assert.ok(!isRelevant("Apple iPad 6 (2018), Silver, 128GB WiFi", { model: "iPad 6", storage: "32GB" }));
+  assert.ok(isRelevant("Apple iPad 6 (6th Gen, 2018) 32GB", { model: "iPad 6", storage: "32GB" }));
+});
+
+test("a title that never mentions capacity is left alone", () => {
+  assert.ok(isRelevant("Apple iPad 6 - WIFI ONLY - Grey", { model: "iPad 6", storage: "32GB" }));
+});
+
+test("a screen size never supplies a generation number", () => {
+  // 'iPad 7th Gen 10.5"' contains a 5, and once matched as an iPad 5.
+  assert.ok(!isRelevant('Apple iPad 7th Gen 10.5” Cellular + Wifi 32GB', { model: "iPad 5", storage: "32GB" }));
+  assert.ok(!isRelevant("Apple iPad (10.2-inch, Wi-Fi, 32GB) Latest Model", { model: "iPad 5", storage: "32GB" }));
+});
+
+test("a stated generation has to be the right one", () => {
+  assert.ok(!isRelevant("Apple iPad 7th Generation 32GB", { model: "iPad 5", storage: "32GB" }));
+  assert.ok(isRelevant("Apple iPad 5 (5th Generation) 32GB", { model: "iPad 5", storage: "32GB" }));
+});
+
+test("an iPad named by its year is still that iPad", () => {
+  // Amazon has no "iPad 6" — it has an "iPad 2018". Same tablet.
+  assert.ok(isRelevant("Apple iPad 2018 32GB - WiFi Only Space Gray", { model: "iPad 6", storage: "32GB" }));
+  assert.ok(isRelevant("Apple iPad (9.7-inch, 2017) 32GB Wi-Fi", { model: "iPad 5", storage: "32GB" }));
+  assert.ok(!isRelevant("Apple iPad 2018 32GB - WiFi Only", { model: "iPad 5", storage: "32GB" }), "2018 is the 6, not the 5");
+});
+
+test("the catch-all classified ad matches nothing", () => {
+  const ad = "iPad 2-10 iPad Pro 9,7, 10.5 11, 12.9 iPad Air iPad Mini 1 YR WR";
+  assert.ok(!isRelevant(ad, { model: "iPad 5", storage: "32GB" }));
+  assert.ok(!isRelevant(ad, { model: "iPad 6", storage: "32GB" }));
+});

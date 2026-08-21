@@ -179,21 +179,33 @@ quotes wholesale, this is what the thing retails for. Two tiers, in order of how
 much a price can be relied on:
 
 1. **Canadian national retail** — Best Buy Canada, read from the JSON endpoint
-   their own storefront uses. Structured name, price, link and availability.
+   their own storefront uses, and Amazon.ca, read from its search page. Both
+   give a name, a price and a link.
 2. **The local market** — Kijiji, read from the data the page ships with. Each
    listing carries its town, so a local asking price reads as one.
 
-Sites that block automated reads or build prices in the browser (Amazon,
-Walmart, eBay, Staples, Canada Computers, Facebook Marketplace) get a ready-made
-search link instead. A link costs one click; a scraped number nobody checked
-costs money.
+Sites that block automated reads or build prices in the browser (Walmart, eBay,
+Staples, Canada Computers, Facebook Marketplace) get a ready-made search link
+instead. Walmart in particular answers every automated request with a "Verify
+Your Identity" challenge, and getting round that is not something this does. A
+link costs one click; a scraped number nobody checked costs money.
+
+Every path fetched is permitted by that site's robots.txt — which is why Best Buy
+is read through `/api/` rather than `/en-ca/search`, the one path they disallow.
 
 Nothing here bills per lookup, which is the standing rule for the shop tools.
 
-Two filters keep the section honest. A listing must name the model — spacing
-differences allowed, so "Sonim XP 9900" finds "XP9900" — and accessories are
-dropped, because a $13 screen protector matches a phone's name perfectly and
-would otherwise become the "cheapest online" price.
+Four filters keep the section honest, and each of them exists because a real
+lookup got something wrong:
+
+- the listing must name the model, with spacing differences allowed, so
+  "Sonim XP 9900" finds "XP9900";
+- accessories are dropped — a $13 screen protector matches a phone's name
+  perfectly and would otherwise become the "cheapest online" price;
+- a family qualifier the product doesn't have rules it out, because an iPad
+  Mini 6 ($470) is not an iPad 6 ($130);
+- and a stated capacity has to match, because a 128GB listing is not the price
+  of the 32GB you are buying. A title that never says is left alone.
 
 Results are cached against the product for 12 hours (`OnlinePrice`, replaced
 wholesale on each search): the page is read all day, and none of these sites

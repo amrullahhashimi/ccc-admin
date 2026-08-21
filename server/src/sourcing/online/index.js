@@ -61,21 +61,86 @@ const ACCESSORY =
  * matching an ad for an iPhone 6, without pretending to be a matcher — this
  * only decides what is worth showing, never what anything is.
  */
+/**
+ * The words that separate one member of a family from another.
+ *
+ * "iPad 6" and "iPad Mini 6" share every word the search cares about, and cost
+ * $130 and $470. A listing carrying a qualifier the product doesn't have is a
+ * different product, however well the rest of it matches.
+ */
+const QUALIFIERS = ["mini", "air", "pro", "plus", "max", "ultra", "fold", "flip", "se"];
+
+/** Every capacity a title mentions, in gigabytes. */
+const capacities = (text) =>
+  [...String(text || "").matchAll(/(\d+(?:\.\d+)?)\s*(gb|tb)\b/gi)].map(
+    (m) => Number(m[1]) * (m[2].toLowerCase() === "tb" ? 1024 : 1)
+  );
+
+/**
+ * Retailers name an iPad by the year it came out, not its generation. Amazon
+ * has no "iPad 5" at all — it has an "iPad (9.7-inch, 2017)". These are the
+ * same tablet, and without this the biggest retailer in the country returns
+ * nothing for half the catalogue.
+ */
+const IPAD_YEARS = { 5: "2017", 6: "2018", 7: "2019", 8: "2020", 9: "2021", 10: "2022" };
+
+/**
+ * A screen size is not a generation.
+ *
+ * 'iPad 7th Gen 10.5"' contains a 5, and matching on it made a 7th generation
+ * iPad look like an iPad 5. Sizes and decimals are removed before the title is
+ * read for model numbers.
+ */
+const withoutSizes = (text) =>
+  String(text || "")
+    .replace(/\d+(?:[.,]\d+)?\s*(?:inch|in\b|"|”|''|cm)/gi, " ")
+    .replace(/\d+[.,]\d+/g, " ");
+
+/** "7th Gen" / "6th Generation" — a generation the seller states outright. */
+const statedGeneration = (text) => {
+  const m = /\b(\d{1,2})\s*(?:st|nd|rd|th)\s*gen(?:eration)?\b/i.exec(String(text || ""));
+  return m ? Number(m[1]) : null;
+};
+
 function isRelevant(title, product) {
   const wanted = tokens(product.model).filter((t) => t.length > 1 || /\d/.test(t));
   if (!wanted.length) return true;
 
-  const found = new Set(tokens(title));
+  /* A qualifier the product doesn't claim rules the listing out: an iPad Mini 6
+     is not an iPad 6, and an iPhone 14 Pro Max is not an iPhone 14. */
+  const titleWords = new Set(tokens(title));
+  const modelWords = new Set(tokens(product.model));
+  if (QUALIFIERS.some((q) => titleWords.has(q) && !modelWords.has(q))) return false;
+
+  /* A generation stated outright has to be the right one. */
+  const modelNumber = Number(tokens(product.model).filter((t) => /^\d+$/.test(t)).pop());
+  const titleGeneration = statedGeneration(title);
+  if (titleGeneration && modelNumber && titleGeneration !== modelNumber) return false;
+
+  /* And so does the wrong size. A 128GB listing is not the price of the 32GB
+     you are buying — but a title that never says is left alone. */
+  if (product.storage) {
+    const want = capacities(product.storage)[0];
+    const found = capacities(title);
+    if (want && found.length && !found.includes(want)) return false;
+  }
+
+  const found = new Set(tokens(withoutSizes(title)));
   /* Spacing is not agreed on: a vendor writes "Sonim XP 9900", Best Buy writes
      "XP9900". Words are matched on their own, and neighbouring words are also
      tried joined together, so the same phone is recognised either way. */
   const squashed = String(title).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  /* An iPad's generation may be written as its year instead. */
+  const isPlainIpad = modelWords.has("ipad") && !QUALIFIERS.some((q) => modelWords.has(q));
+  const yearForGeneration = isPlainIpad && modelNumber ? IPAD_YEARS[modelNumber] : null;
 
   const covered = new Set();
   wanted.forEach((token, i) => {
     if (found.has(token)) covered.add(i);
     // A run-together word ("xp9900") is distinctive enough to trust as a substring.
     else if (token.length >= 4 && /\d/.test(token) && squashed.includes(token)) covered.add(i);
+    else if (yearForGeneration && token === String(modelNumber) && found.has(yearForGeneration)) covered.add(i);
   });
 
   for (let i = 0; i < wanted.length - 1; i++) {
